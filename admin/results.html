@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Result Management | MathScienceYJR CMS</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/admin.css">
+
+  <!-- Safety Loader Hide Fallback Script -->
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loader = document.getElementById('loader');
+        if (loader && !loader.classList.contains('hidden')) {
+          loader.classList.add('hidden');
+          console.warn('Page loader hidden by safety fallback timeout.');
+        }
+      }, 1500);
+    });
+  </script>
+</head>
+<body>
+
+  <div class="admin-wrapper">
+    <!-- Sidebar -->
+    <div id="admin-sidebar-container"></div>
+
+    <main class="admin-main">
+      <!-- Admin Header -->
+      <div id="admin-header-container"></div>
+
+      <div class="admin-content">
+        <!-- Control actions row -->
+        <div class="table-actions">
+          <div class="search-bar">
+            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <input type="text" id="result-search" placeholder="Search by student name or exam...">
+          </div>
+          <button class="btn btn-primary" id="open-add-result-modal">➕ Add New Result</button>
+        </div>
+
+        <!-- Results Table -->
+        <div class="content-box">
+          <div class="table-responsive">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Photo</th>
+                  <th>Student Name</th>
+                  <th>Exam Name</th>
+                  <th>Score/Marks</th>
+                  <th>Rank Obtained</th>
+                  <th>Featured</th>
+                  <th>Visibility</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="results-admin-tbody">
+                <tr>
+                  <td colspan="8" style="text-align:center; color:var(--text-muted);">Fetching records from DB...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Result Modal -->
+  <div class="modal-overlay" id="result-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 id="result-modal-title">Add Topper Milestone</h3>
+        <button class="modal-close" id="close-result-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="result-editor-form">
+          <input type="hidden" id="result-edit-id">
+
+          <div class="form-group">
+            <label for="res-name-field" class="form-label">Student Name</label>
+            <input type="text" id="res-name-field" class="form-control" placeholder="Aarav Sharma" required>
+          </div>
+
+          <div class="grid-2" style="margin-top:1rem;">
+            <div class="form-group">
+              <label for="res-exam-field" class="form-label">Exam Name (e.g. JEE Advanced 2026)</label>
+              <input type="text" id="res-exam-field" class="form-control" placeholder="JEE Advanced 2026" required>
+            </div>
+            <div class="form-group">
+              <label for="res-marks-field" class="form-label">Score / Percentage (e.g. 336/360)</label>
+              <input type="text" id="res-marks-field" class="form-control" placeholder="336/360" required>
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-top:1rem;">
+            <div class="form-group">
+              <label for="res-rank-field" class="form-label">Rank Obtained (e.g. AIR 12)</label>
+              <input type="text" id="res-rank-field" class="form-control" placeholder="AIR 12" required>
+            </div>
+            <div class="form-group">
+              <label for="res-type-field" class="form-label">Achievement Category Badge</label>
+              <input type="text" id="res-type-field" class="form-control" placeholder="Olympiad Topper" required>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:1rem;">
+            <label for="res-photo-field" class="form-label">Student Photograph URL</label>
+            <input type="text" id="res-photo-field" class="form-control" placeholder="https://...">
+          </div>
+
+          <div class="grid-2" style="margin-top:1.5rem;">
+            <div class="form-group" style="display:flex; align-items:center; gap:0.5rem;">
+              <input type="checkbox" id="res-featured-field" style="width:20px; height:20px; cursor:pointer;">
+              <label for="res-featured-field" style="color:#cbd5e1; cursor:pointer;">Feature on Home Page</label>
+            </div>
+            <div class="form-group" style="display:flex; align-items:center; gap:0.5rem;">
+              <input type="checkbox" id="res-visible-field" style="width:20px; height:20px; cursor:pointer;" checked>
+              <label for="res-visible-field" style="color:#cbd5e1; cursor:pointer;">Visible to public</label>
+            </div>
+          </div>
+
+          <div style="margin-top:2.5rem; display:flex; justify-content:flex-end; gap:1rem;">
+            <button type="button" class="btn btn-outline" id="cancel-result-modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Result Milestone</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../admin/js/admin-core.js"></script>
+  <script type="module">
+    import { getCollection, addDocument, updateDocument, deleteDocument } from '../firebase/firebase-config.js';
+
+    let resultsList = [];
+
+    if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", loadResultsManager); } else { loadResultsManager(); }
+
+    async function loadResultsManager() {
+      const tbody = document.getElementById("results-admin-tbody");
+      if (!tbody) return;
+
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;">Fetching student records...</td></tr>`;
+
+      try {
+        resultsList = await getCollection("results");
+        renderAdminResults(resultsList);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#ef4444;">Failed to read results DB.</td></tr>`;
+      }
+    }
+
+    function renderAdminResults(list) {
+      const tbody = document.getElementById("results-admin-tbody");
+      if (!tbody) return;
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">No result records created.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = '';
+      list.forEach(res => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><img src="${res.photoUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150'}" style="width:40px; height:40px; object-fit:cover; border-radius:50%; border:1px solid #1e293b;"></td>
+          <td><strong>${res.studentName}</strong></td>
+          <td>${res.examName}</td>
+          <td>${res.marks}</td>
+          <td><span style="color:var(--secondary); font-weight:700;">${res.rank}</span></td>
+          <td>
+            <button class="action-btn toggle-featured-res" data-id="${res.id}" data-feat="${res.featured}">
+              ${res.featured ? '⭐ Featured' : '☆ Standard'}
+            </button>
+          </td>
+          <td>
+            <button class="action-btn toggle-visible-res" data-id="${res.id}" data-visible="${res.visible}">
+              ${res.visible ? '👁️ Live' : '👁️‍ewöhn Hidden'}
+            </button>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <button class="action-btn edit-result-btn" data-id="${res.id}">✏️ Edit</button>
+              <button class="action-btn delete-result-btn" data-id="${res.id}">🗑️ Delete</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      bindTableActions();
+    }
+
+    function bindTableActions() {
+      // Toggle Featured
+      document.querySelectorAll(".toggle-featured-res").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          const feat = btn.getAttribute("data-feat") === "true";
+          btn.disabled = true;
+          await updateDocument("results", id, { featured: !feat });
+          await loadResultsManager();
+        });
+      });
+
+      // Toggle Visibility
+      document.querySelectorAll(".toggle-visible-res").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          const vis = btn.getAttribute("data-visible") === "true";
+          btn.disabled = true;
+          await updateDocument("results", id, { visible: !vis });
+          await loadResultsManager();
+        });
+      });
+
+      // Edit Click
+      document.querySelectorAll(".edit-result-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-id");
+          const res = resultsList.find(r => r.id === id);
+          if (res) openModal(res);
+        });
+      });
+
+      // Delete Click
+      document.querySelectorAll(".delete-result-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          if (confirm("Permanently delete student record?")) {
+            await deleteDocument("results", id);
+            await loadResultsManager();
+          }
+        });
+      });
+    }
+
+    // Modal control
+    const modal = document.getElementById("result-modal");
+    const openAddBtn = document.getElementById("open-add-result-modal");
+    const closeBtn = document.getElementById("close-result-modal");
+    const cancelBtn = document.getElementById("cancel-result-modal");
+    const editorForm = document.getElementById("result-editor-form");
+
+    openAddBtn.addEventListener("click", () => openModal(null));
+    closeBtn.addEventListener("click", closeModal);
+    cancelBtn.addEventListener("click", closeModal);
+
+    function openModal(res = null) {
+      editorForm.reset();
+      
+      if (res) {
+        document.getElementById("result-modal-title").innerText = "Edit Topper Details";
+        document.getElementById("result-edit-id").value = res.id;
+        document.getElementById("res-name-field").value = res.studentName;
+        document.getElementById("res-exam-field").value = res.examName;
+        document.getElementById("res-marks-field").value = res.marks;
+        document.getElementById("res-rank-field").value = res.rank;
+        document.getElementById("res-type-field").value = res.achievementType;
+        document.getElementById("res-photo-field").value = res.photoUrl || '';
+        document.getElementById("res-featured-field").checked = res.featured;
+        document.getElementById("res-visible-field").checked = res.visible;
+      } else {
+        document.getElementById("result-modal-title").innerText = "Add Topper Milestone";
+        document.getElementById("result-edit-id").value = '';
+        document.getElementById("res-featured-field").checked = false;
+        document.getElementById("res-visible-field").checked = true;
+      }
+      modal.classList.add("active");
+    }
+
+    function closeModal() {
+      modal.classList.remove("active");
+    }
+
+    editorForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const saveBtn = editorForm.querySelector("button[type='submit']");
+      saveBtn.disabled = true;
+      saveBtn.innerText = "Saving Record...";
+
+      const id = document.getElementById("result-edit-id").value;
+
+      const payload = {
+        studentName: document.getElementById("res-name-field").value,
+        examName: document.getElementById("res-exam-field").value,
+        marks: document.getElementById("res-marks-field").value,
+        rank: document.getElementById("res-rank-field").value,
+        achievementType: document.getElementById("res-type-field").value,
+        photoUrl: document.getElementById("res-photo-field").value,
+        featured: document.getElementById("res-featured-field").checked,
+        visible: document.getElementById("res-visible-field").checked
+      };
+
+      try {
+        if (id) {
+          await updateDocument("results", id, payload);
+        } else {
+          await addDocument("results", payload);
+        }
+        closeModal();
+        await loadResultsManager();
+      } catch (err) {
+        alert("Failed to save result record.");
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerText = "Save Result Milestone";
+      }
+    });
+
+    // Search filter
+    document.getElementById("result-search").addEventListener("input", (e) => {
+      const q = e.target.value.toLowerCase();
+      const filtered = resultsList.filter(r => 
+        r.studentName.toLowerCase().includes(q) || 
+        r.examName.toLowerCase().includes(q)
+      );
+      renderAdminResults(filtered);
+    });
+  </script>
+</body>
+</html>

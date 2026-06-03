@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Global Settings | MathScienceYJR CMS</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/admin.css">
+
+  <!-- Safety Loader Hide Fallback Script -->
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loader = document.getElementById('loader');
+        if (loader && !loader.classList.contains('hidden')) {
+          loader.classList.add('hidden');
+          console.warn('Page loader hidden by safety fallback timeout.');
+        }
+      }, 1500);
+    });
+  </script>
+</head>
+<body>
+
+  <div class="admin-wrapper">
+    <!-- Sidebar -->
+    <div id="admin-sidebar-container"></div>
+
+    <main class="admin-main">
+      <!-- Admin Header -->
+      <div id="admin-header-container"></div>
+
+      <div class="admin-content">
+        <div class="content-box">
+          <div class="box-header">
+            <h2>Update Global Website Settings</h2>
+            <span style="font-size:0.8rem; color:var(--accent);">Changes reflect instantly across the entire platform</span>
+          </div>
+
+          <form id="global-settings-form">
+            <div class="grid-2">
+              <div class="form-group">
+                <label for="set-instName" class="form-label">Institute Name</label>
+                <input type="text" id="set-instName" class="form-control" style="background-color: #090d16; border-color: #1e293b; color:#fff;" required>
+              </div>
+              <div class="form-group">
+                <label for="set-logo" class="form-label">Logo Image URL</label>
+                <input type="text" id="set-logo" class="form-control" style="background-color: #090d16; border-color: #1e293b; color:#fff;" placeholder="https://...">
+              </div>
+            </div>
+
+            <div class="grid-3" style="margin-top: 1rem;">
+              <div class="form-group">
+                <label for="set-phone" class="form-label">Contact Phone Number</label>
+                <input type="text" id="set-phone" class="form-control" style="background-color: #090d16; border-color: #1e293b; color:#fff;" required>
+              </div>
+              <div class="form-group">
+                <label for="set-whatsapp" class="form-label">WhatsApp Number (e.g. 919876543210)</label>
+                <input type="text" id="set-whatsapp" class="form-control" style="background-color: #090d16; border-color: #1e293b; color:#fff;" required>
+              </div>
+              <div class="form-group">
+                <label for="set-email" class="form-label">Admissions Email</label>
+                <input type="email" id="set-email" class="form-control" style="background-color: #090d16; border-color: #1e293b; color:#fff;" required>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+              <label for="set-address" class="form-label">Physical Address</label>
+              <textarea id="set-address" class="form-control" style="background-color: #090d16; border-color: #1e293b; color:#fff;" required></textarea>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+              <label for="set-map" class="form-label">Google Maps Embed Link (iframe src link)</label>
+              <input type="text" id="set-map" class="form-control" style="background-color: #090d16; border-color: #1e293b; color:#fff;">
+            </div>
+
+            <h3 style="margin-top: 2.5rem; margin-bottom: 1.25rem; color:#fff; font-size:1.1rem; border-bottom:1px solid #1e293b; padding-bottom:0.5rem;">Social Media Links</h3>
+            <div class="grid-3">
+              <div class="form-group">
+                <label for="set-facebook" class="form-label">Facebook Profile Link</label>
+                <input type="text" id="set-facebook" class="form-control" style="background-color: #090d16; border-color: #1e293b; color:#fff;">
+              </div>
+              <div class="form-group">
+                <label for="set-instagram" class="form-label">Instagram Profile Link</label>
+                <input type="text" id="set-instagram" class="form-control" style="background-color: #090d16; border-color: #1e293b; color:#fff;">
+              </div>
+              <div class="form-group">
+                <label for="set-youtube" class="form-label">YouTube Channel Link</label>
+                <input type="text" id="set-youtube" class="form-control" style="background-color: #090d16; border-color: #1e293b; color:#fff;">
+              </div>
+            </div>
+
+            <div style="margin-top: 2.5rem; display:flex; justify-content:flex-end;">
+              <button type="submit" class="btn btn-primary">
+                Save Settings Configuration
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="../admin/js/admin-core.js"></script>
+  <script type="module">
+    import { getDocument, setDocument } from '../firebase/firebase-config.js';
+
+    const settingsForm = document.getElementById("global-settings-form");
+
+    const initDynamicPage_60k15 = async () => {
+      await loadSettings();
+    };
+if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", initDynamicPage_60k15); } else { initDynamicPage_60k15(); }
+
+    async function loadSettings() {
+      try {
+        const settings = await getDocument("settings", "global");
+        if (settings) {
+          document.getElementById("set-instName").value = settings.instituteName || '';
+          document.getElementById("set-logo").value = settings.logoUrl || '';
+          document.getElementById("set-phone").value = settings.contactNumber || '';
+          document.getElementById("set-whatsapp").value = settings.whatsAppNumber || '';
+          document.getElementById("set-email").value = settings.email || '';
+          document.getElementById("set-address").value = settings.address || '';
+          document.getElementById("set-map").value = settings.googleMapLink || '';
+          
+          if (settings.socialMedia) {
+            document.getElementById("set-facebook").value = settings.socialMedia.facebook || '';
+            document.getElementById("set-instagram").value = settings.socialMedia.instagram || '';
+            document.getElementById("set-youtube").value = settings.socialMedia.youtube || '';
+          }
+        }
+      } catch (err) {
+        console.error("Load settings error: ", err);
+      }
+    }
+
+    if (settingsForm) {
+      settingsForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const submitBtn = settingsForm.querySelector("button[type='submit']");
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Saving Configuration...";
+
+        const payload = {
+          instituteName: document.getElementById("set-instName").value,
+          logoUrl: document.getElementById("set-logo").value,
+          contactNumber: document.getElementById("set-phone").value,
+          whatsAppNumber: document.getElementById("set-whatsapp").value,
+          email: document.getElementById("set-email").value,
+          address: document.getElementById("set-address").value,
+          googleMapLink: document.getElementById("set-map").value,
+          socialMedia: {
+            facebook: document.getElementById("set-facebook").value,
+            instagram: document.getElementById("set-instagram").value,
+            youtube: document.getElementById("set-youtube").value
+          }
+        };
+
+        try {
+          await setDocument("settings", "global", payload);
+          alert("Global settings saved successfully. All changes are live.");
+        } catch (err) {
+          console.error("Save settings error: ", err);
+          alert("Failed to update config. Verify security rules.");
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Save Settings Configuration";
+        }
+      });
+    }
+  </script>
+</body>
+</html>

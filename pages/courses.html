@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Our Courses | MathScienceYJR</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+
+  <!-- Safety Loader Hide Fallback Script -->
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loader = document.getElementById('loader');
+        if (loader && !loader.classList.contains('hidden')) {
+          loader.classList.add('hidden');
+          console.warn('Page loader hidden by safety fallback timeout.');
+        }
+      }, 1500);
+    });
+  </script>
+</head>
+<body>
+
+  <!-- Page Loader -->
+  <div class="page-loader" id="loader">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Global Header -->
+  <div id="global-header"></div>
+
+  <!-- Header Banner -->
+  <section class="section-padding reveal active" style="padding-top: 140px; background: linear-gradient(180deg, rgba(37, 99, 235, 0.05), transparent); text-align: center;">
+    <div class="container">
+      <span class="category-badge" style="margin-bottom: 1rem;">Course Catalog</span>
+      <h1 style="font-size: 3rem; margin-bottom: 1rem;">Find Your Academic Pathway</h1>
+      <p class="text-muted" style="max-width: 600px; margin: 0 auto;">Select from our elite math, physics, and chemistry modules. Filter categories below to find your fit.</p>
+    </div>
+  </section>
+
+  <!-- Filter & Listing Grid Section -->
+  <section class="section-padding reveal" style="padding-top: 0;">
+    <div class="container">
+      <!-- Filter controls -->
+      <div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 3rem; flex-wrap: wrap;" id="category-filters">
+        <button class="btn btn-primary" data-filter="all">All Disciplines</button>
+        <button class="btn btn-outline" data-filter="Mathematics">Mathematics</button>
+        <button class="btn btn-outline" data-filter="Physics">Physics</button>
+        <button class="btn btn-outline" data-filter="Chemistry">Chemistry</button>
+      </div>
+
+      <!-- Courses Grid -->
+      <div class="grid-3" id="courses-catalog-grid">
+        <!-- Dynamic Courses List Mounted Here -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Global Footer -->
+  <div id="global-footer"></div>
+
+  <!-- WhatsApp Bubble -->
+  <div id="global-whatsapp"></div>
+
+  <script type="module" src="../assets/js/main.js"></script>
+  <script type="module">
+    import { getCollection } from '../firebase/firebase-config.js';
+
+    let allCourses = [];
+
+    const initDynamicPage_9fm8b = async () => {
+      await loadCoursesCatalog();
+      setupFilters();
+    };
+if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", initDynamicPage_9fm8b); } else { initDynamicPage_9fm8b(); }
+
+    async function loadCoursesCatalog() {
+      const grid = document.getElementById("courses-catalog-grid");
+      if (!grid) return;
+
+      grid.innerHTML = `<div class="loader" style="grid-column: 1/-1; text-align:center; padding: 4rem;">Fetching courses...</div>`;
+
+      try {
+        allCourses = await getCollection("courses");
+        renderCoursesList(allCourses);
+      } catch (err) {
+        console.error("Courses Catalog Error: ", err);
+        grid.innerHTML = `<p class="text-muted text-center" style="grid-column: 1/-1;">Failed to load course list. Please check back soon.</p>`;
+      }
+    }
+
+    function renderCoursesList(courses) {
+      const grid = document.getElementById("courses-catalog-grid");
+      if (!grid) return;
+
+      const visibleList = courses.filter(c => c.visible);
+
+      if (visibleList.length === 0) {
+        grid.innerHTML = `<p class="text-muted text-center" style="grid-column: 1/-1;">No course listings available for this selection.</p>`;
+        return;
+      }
+
+      grid.innerHTML = '';
+      visibleList.forEach(course => {
+        const card = document.createElement("div");
+        card.className = "glass-card reveal active";
+        card.innerHTML = `
+          <img src="${course.imageUrl || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=600'}" alt="${course.title}">
+          <div class="card-content">
+            <span class="category-badge">${course.category}</span>
+            <h3 style="margin-top: 0.75rem;">${course.title}</h3>
+            <p>${course.description}</p>
+            <div style="margin-bottom: 1.25rem;">
+              <h4 style="font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; letter-spacing: 0.5px;">Syllabus Focus</h4>
+              <ul style="padding-left: 1.25rem; font-size: 0.85rem; color: var(--text-muted);">
+                ${course.syllabus ? course.syllabus.map(topic => `<li>${topic}</li>`).join('') : '<li>Conceptual fundamentals</li>'}
+              </ul>
+            </div>
+            <div class="card-footer">
+              <div>
+                <span style="font-size: 0.75rem; color: var(--text-muted); display:block; line-height: 1;">Duration: ${course.duration}</span>
+                <span class="fees">${course.fees}</span>
+              </div>
+              <a href="../pages/admission.html?course=${encodeURIComponent(course.title)}" class="btn btn-primary" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">Register Path</a>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function setupFilters() {
+      const filters = document.querySelectorAll("#category-filters button");
+      filters.forEach(btn => {
+        btn.addEventListener("click", () => {
+          filters.forEach(f => {
+            f.classList.remove("btn-primary");
+            f.classList.add("btn-outline");
+          });
+          btn.classList.add("btn-primary");
+          btn.classList.remove("btn-outline");
+
+          const filterVal = btn.getAttribute("data-filter");
+          if (filterVal === "all") {
+            renderCoursesList(allCourses);
+          } else {
+            const filtered = allCourses.filter(c => c.category === filterVal);
+            renderCoursesList(filtered);
+          }
+        });
+      });
+    }
+  </script>
+</body>
+</html>

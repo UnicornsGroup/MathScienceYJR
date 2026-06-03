@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MathScienceYJR | Elite STEM Coaching & Olympiad Preparation</title>
+  <meta name="description" content="Prepare for Math & Science Olympiads, JEE Advanced, and NEET with MathScienceYJR. Interactive conceptual teaching and premium academic mentoring.">
+  <meta name="keywords" content="Math Science YJR, Olympiad coaching, JEE preparation, NEET physics, STEM academy, Toppers Coaching">
+  
+  <!-- Styling Links -->
+  <link rel="stylesheet" href="./assets/css/style.css">
+  <link rel="stylesheet" href="./assets/css/components.css">
+
+  <!-- Safety Loader Hide Fallback Script -->
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loader = document.getElementById('loader');
+        if (loader && !loader.classList.contains('hidden')) {
+          loader.classList.add('hidden');
+          console.warn('Page loader hidden by safety fallback timeout.');
+        }
+      }, 1500);
+    });
+  </script>
+</head>
+<body>
+
+  <!-- Page Loader -->
+  <div class="page-loader" id="loader">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Global Navigation Header -->
+  <div id="global-header"></div>
+
+  <!-- Main Showcase Hero Section -->
+  <section class="section-padding reveal active" id="hero-section" style="padding-top: 140px; background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.15), transparent 60%); min-height: 85vh; display: flex; align-items: center;">
+    <div class="container grid-2">
+      <div style="display: flex; flex-direction: column; justify-content: center;">
+        <span class="category-badge" style="margin-bottom: 1rem; letter-spacing: 2px;" id="hero-badge">ADMISSIONS OPEN 2026-27</span>
+        <h1 id="hero-title" style="font-size: 3.5rem; margin-bottom: 1.5rem; line-height: 1.1;">Unlock Conceptual Excellence in STEM</h1>
+        <p id="hero-desc" class="text-muted" style="font-size: 1.2rem; margin-bottom: 2.5rem; line-height: 1.6;">
+          MathScienceYJR is India's leading academy for elite math, physics, and chemistry coaching. Master advanced boards, Olympiads, JEE, and NEET with our expert pedagogy.
+        </p>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <a href="./pages/admission.html" class="btn btn-primary" id="hero-cta">Apply Online Now</a>
+          <a href="./pages/courses.html" class="btn btn-outline">Explore Courses</a>
+        </div>
+      </div>
+      <div class="flex-center float-anim" style="position: relative;">
+        <div class="glass-card" style="padding: 0.5rem; border-radius: var(--border-radius-lg); width: 100%; max-width: 520px; overflow: hidden; box-shadow: var(--glass-shadow);">
+          <img id="hero-img" src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=1200" alt="STEM Visual Learning Representation" style="border-radius: var(--border-radius-md); width: 100%; height: 380px; object-fit: cover;">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sections Layout Wrapper (Handles admin reordering and visibility toggling dynamically) -->
+  <div id="homepage-sections-wrapper">
+
+    <!-- Section 1: Statistics -->
+    <section class="section-padding reveal" id="sec-statistics" style="background-color: var(--primary); color: #fff;">
+      <div class="container grid-4 text-center">
+        <div>
+          <h2 style="font-size: 3rem; color: var(--accent); font-family: var(--font-heading); font-weight: 800; margin-bottom: 0.5rem;">98%</h2>
+          <p style="color: #94a3b8; font-weight: 500;">Score Improvement Rate</p>
+        </div>
+        <div>
+          <h2 style="font-size: 3rem; color: var(--accent); font-family: var(--font-heading); font-weight: 800; margin-bottom: 0.5rem;">500+</h2>
+          <p style="color: #94a3b8; font-weight: 500;">IIT & AIIMS Selection Leads</p>
+        </div>
+        <div>
+          <h2 style="font-size: 3rem; color: var(--accent); font-family: var(--font-heading); font-weight: 800; margin-bottom: 0.5rem;">15+</h2>
+          <p style="color: #94a3b8; font-weight: 500;">Olympiad AIR Ranks</p>
+        </div>
+        <div>
+          <h2 style="font-size: 3rem; color: var(--accent); font-family: var(--font-heading); font-weight: 800; margin-bottom: 0.5rem;">1:10</h2>
+          <p style="color: #94a3b8; font-weight: 500;">Teacher Student Ratio</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Why Choose Us -->
+    <section class="section-padding reveal" id="sec-whyChooseUs">
+      <div class="container">
+        <div class="section-header">
+          <span class="subtitle">The YJR Difference</span>
+          <h2>Why MathScienceYJR Outperforms</h2>
+          <p>We combine interactive visualizations, professional syllabus, and close tracking to deliver student breakthroughs.</p>
+        </div>
+        <div class="grid-3">
+          <div class="glass-card" style="padding: 2rem;">
+            <div style="font-size: 2rem; color: var(--secondary); margin-bottom: 1.5rem;">🔬</div>
+            <h3 style="margin-bottom: 0.75rem;">Interactive Pedagogy</h3>
+            <p class="text-muted">Complex theoretical physics and mathematics equations are simulated visually, driving intuitive retention rather than formula drilling.</p>
+          </div>
+          <div class="glass-card" style="padding: 2rem;">
+            <div style="font-size: 2rem; color: var(--secondary); margin-bottom: 1.5rem;">🎓</div>
+            <h3 style="margin-bottom: 0.75rem;">Olympiad Pedigree</h3>
+            <p class="text-muted">Our curriculum is curated by IIT graduates and Olympiad mentors with over 15 years of competitive examination guidance experience.</p>
+          </div>
+          <div class="glass-card" style="padding: 2rem;">
+            <div style="font-size: 2rem; color: var(--secondary); margin-bottom: 1.5rem;">📊</div>
+            <h3 style="margin-bottom: 0.75rem;">Granular Test Analysis</h3>
+            <p class="text-muted">Admins and mentors conduct real-time evaluations to pinpoint weakness areas, ensuring students plug errors before examination day.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Courses Preview -->
+    <section class="section-padding reveal" id="sec-courses" style="background: linear-gradient(180deg, transparent, rgba(37, 99, 235, 0.03));">
+      <div class="container">
+        <div class="section-header">
+          <span class="subtitle">Premier Programs</span>
+          <h2>Our Active Courses</h2>
+          <p>Explore specialized curriculums designed to help students master science and mathematics streams.</p>
+        </div>
+        <div class="grid-3" id="home-courses-grid">
+          <!-- Dynamic Content Loads Here -->
+        </div>
+        <div class="text-center" style="margin-top: 3.5rem;">
+          <a href="./pages/courses.html" class="btn btn-outline">View All Course Paths</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Results Preview -->
+    <section class="section-padding reveal" id="sec-results">
+      <div class="container">
+        <div class="section-header">
+          <span class="subtitle">Success Records</span>
+          <h2>Our Hall of Toppers</h2>
+          <p>Highlighting the hard work and achievements of students who conquered national examinations under YJR mentorship.</p>
+        </div>
+        <div class="grid-3" id="home-results-grid">
+          <!-- Dynamic Content Loads Here -->
+        </div>
+        <div class="text-center" style="margin-top: 3.5rem;">
+          <a href="./pages/results.html" class="btn btn-outline">Explore Historical Records</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5: Testimonials -->
+    <section class="section-padding reveal" id="sec-testimonials" style="background: linear-gradient(180deg, rgba(37, 99, 235, 0.03), transparent);">
+      <div class="container">
+        <div class="section-header">
+          <span class="subtitle">Testimonials</span>
+          <h2>What Parents & Students Say</h2>
+          <p>Verified reviews and success stories reflecting our dedicated academic guidance.</p>
+        </div>
+        <div class="grid-2" id="home-testimonials-grid">
+          <!-- Dynamic Content Loads Here -->
+        </div>
+        <div class="text-center" style="margin-top: 3.5rem;">
+          <a href="./pages/testimonials.html" class="btn btn-outline">Read All Reviews</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 6: Gallery Preview -->
+    <section class="section-padding reveal" id="sec-gallery">
+      <div class="container">
+        <div class="section-header">
+          <span class="subtitle">Life at YJR</span>
+          <h2>Our Campus & Infrastructure</h2>
+          <p>Take a glimpse into our modern classrooms, physics labs, and seminar chambers.</p>
+        </div>
+        <div class="grid-3" id="home-gallery-grid">
+          <!-- Dynamic Content Loads Here -->
+        </div>
+        <div class="text-center" style="margin-top: 3.5rem;">
+          <a href="./pages/gallery.html" class="btn btn-outline">View Complete Gallery</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 7: Latest Announcements -->
+    <section class="section-padding reveal" id="sec-announcements" style="background-color: rgba(37, 99, 235, 0.02); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
+      <div class="container">
+        <div class="section-header">
+          <span class="subtitle">Notice Board</span>
+          <h2>Active Announcements</h2>
+          <p>Stay updated with our upcoming scholarship tests, new batch dates, and schedule amendments.</p>
+        </div>
+        <div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem;" id="home-announcements-list">
+          <!-- Dynamic Content Loads Here -->
+        </div>
+        <div class="text-center" style="margin-top: 3.5rem;">
+          <a href="./pages/announcements.html" class="btn btn-outline">View All Notices</a>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Contact CTA Banner -->
+  <section class="section-padding reveal" style="background: radial-gradient(circle, rgba(15, 23, 42, 0.95), #020617); color: #fff;">
+    <div class="container text-center" style="max-width: 800px;">
+      <h2 style="font-size: 2.5rem; margin-bottom: 1rem; color: #fff;">Ready to Experience the STEM Breakthrough?</h2>
+      <p style="color: #94a3b8; font-size: 1.1rem; margin-bottom: 2.5rem;">
+        Speak to our admissions panel, attend a diagnostic evaluation test, and reserve a seat in our upcoming coaching sessions.
+      </p>
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="./pages/admission.html" class="btn btn-primary">Apply Online</a>
+        <a href="./pages/contact.html" class="btn btn-outline" style="color: #fff; border-color: rgba(255,255,255,0.2);">Connect With Us</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Global Footer -->
+  <div id="global-footer"></div>
+
+  <!-- Floating WhatsApp widget -->
+  <div id="global-whatsapp"></div>
+
+  <!-- JavaScript Imports -->
+  <script type="module" src="./assets/js/main.js"></script>
+  <script type="module" src="./assets/js/home.js"></script>
+</body>
+</html>

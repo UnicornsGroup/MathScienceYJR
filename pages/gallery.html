@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gallery | MathScienceYJR</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <style>
+    .lightbox-image {
+      max-width: 100%;
+      max-height: 75vh;
+      border-radius: var(--border-radius-sm);
+      display: block;
+      margin: 0 auto;
+    }
+    .lightbox-caption {
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--text-dark);
+    }
+  </style>
+
+  <!-- Safety Loader Hide Fallback Script -->
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loader = document.getElementById('loader');
+        if (loader && !loader.classList.contains('hidden')) {
+          loader.classList.add('hidden');
+          console.warn('Page loader hidden by safety fallback timeout.');
+        }
+      }, 1500);
+    });
+  </script>
+</head>
+<body>
+
+  <!-- Page Loader -->
+  <div class="page-loader" id="loader">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Global Header -->
+  <div id="global-header"></div>
+
+  <!-- Header Banner -->
+  <section class="section-padding reveal active" style="padding-top: 140px; background: linear-gradient(180deg, rgba(37, 99, 235, 0.05), transparent); text-align: center;">
+    <div class="container">
+      <span class="category-badge" style="margin-bottom: 1rem;">Visual Tour</span>
+      <h1 style="font-size: 3rem; margin-bottom: 1rem;">Life at MathScienceYJR</h1>
+      <p class="text-muted" style="max-width: 600px; margin: 0 auto;">Take a virtual look inside our labs, interactive classroom sessions, annual exhibitions, and student achievements seminars.</p>
+    </div>
+  </section>
+
+  <!-- Gallery Section -->
+  <section class="section-padding reveal" style="padding-top: 0;">
+    <div class="container">
+      <!-- Album filters -->
+      <div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 3rem; flex-wrap: wrap;" id="album-filters">
+        <button class="btn btn-primary" data-filter="all">All Photos</button>
+        <!-- Categories will mount here dynamically -->
+      </div>
+
+      <!-- Photo Grid -->
+      <div class="grid-3" id="gallery-grid">
+        <!-- Gallery Items Mount Here -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Lightbox Modal -->
+  <div class="modal-overlay" id="lightbox-modal">
+    <div class="modal-container" style="max-width: 750px;">
+      <div class="modal-header">
+        <h3 id="lightbox-album-title" style="font-size: 1.1rem; color: var(--secondary); text-transform: uppercase;">Image Details</h3>
+        <button class="modal-close" id="close-lightbox">&times;</button>
+      </div>
+      <div class="modal-body" style="background-color: var(--bg-light); padding: 2rem;">
+        <img id="lightbox-img-source" class="lightbox-image" src="" alt="">
+        <p id="lightbox-caption-text" class="lightbox-caption"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Footer -->
+  <div id="global-footer"></div>
+
+  <!-- WhatsApp Bubble -->
+  <div id="global-whatsapp"></div>
+
+  <script type="module" src="../assets/js/main.js"></script>
+  <script type="module">
+    import { getCollection } from '../firebase/firebase-config.js';
+
+    let allGallery = [];
+
+    const initDynamicPage_9y165 = async () => {
+      await loadGalleryPage();
+    };
+if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", initDynamicPage_9y165); } else { initDynamicPage_9y165(); }
+
+    async function loadGalleryPage() {
+      const grid = document.getElementById("gallery-grid");
+      if (!grid) return;
+
+      grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center;">Loading gallery media...</div>`;
+
+      try {
+        allGallery = await getCollection("gallery");
+        const visibleGallery = allGallery.filter(g => g.visible).sort((a, b) => a.order - b.order);
+
+        renderGallery(visibleGallery);
+        buildAlbumFilters(visibleGallery);
+      } catch (err) {
+        console.error("Gallery loading error: ", err);
+        grid.innerHTML = `<p class="text-muted text-center" style="grid-column: 1/-1;">Error rendering photo catalog.</p>`;
+      }
+    }
+
+    function renderGallery(items) {
+      const grid = document.getElementById("gallery-grid");
+      if (!grid) return;
+
+      if (items.length === 0) {
+        grid.innerHTML = `<p class="text-muted text-center" style="grid-column: 1/-1;">No photos available for this selection.</p>`;
+        return;
+      }
+
+      grid.innerHTML = '';
+      items.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "glass-card reveal active";
+        card.style.cursor = "pointer";
+        card.innerHTML = `
+          <div style="overflow: hidden; height: 240px;">
+            <img src="${item.imageUrl}" alt="${item.caption}" style="width:100%; height:100%; object-fit:cover; transition: var(--transition-smooth);">
+          </div>
+          <div style="padding: 1rem; border-top: 1px solid var(--border-color);">
+            <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--secondary); font-weight: 600;">${item.album}</span>
+            <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.caption}</p>
+          </div>
+        `;
+
+        const img = card.querySelector("img");
+        card.addEventListener("mouseenter", () => img.style.transform = "scale(1.06)");
+        card.addEventListener("mouseleave", () => img.style.transform = "scale(1)");
+
+        // Click to open lightbox
+        card.addEventListener("click", () => openLightbox(item));
+
+        grid.appendChild(card);
+      });
+    }
+
+    function buildAlbumFilters(items) {
+      const filtersContainer = document.getElementById("album-filters");
+      if (!filtersContainer) return;
+
+      // Extract unique albums
+      const albums = [...new Set(items.map(i => i.album))];
+      
+      albums.forEach(album => {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-outline";
+        btn.setAttribute("data-filter", album);
+        btn.innerText = album;
+        filtersContainer.appendChild(btn);
+      });
+
+      // Bind filter clicks
+      const buttons = filtersContainer.querySelectorAll("button");
+      buttons.forEach(btn => {
+        btn.addEventListener("click", () => {
+          buttons.forEach(b => {
+            b.classList.remove("btn-primary");
+            b.classList.add("btn-outline");
+          });
+          btn.classList.add("btn-primary");
+          btn.classList.remove("btn-outline");
+
+          const val = btn.getAttribute("data-filter");
+          if (val === "all") {
+            renderGallery(allGallery.filter(g => g.visible));
+          } else {
+            renderGallery(allGallery.filter(g => g.visible && g.album === val));
+          }
+        });
+      });
+    }
+
+    // Lightbox triggers
+    const modal = document.getElementById("lightbox-modal");
+    const closeBtn = document.getElementById("close-lightbox");
+    const lightImg = document.getElementById("lightbox-img-source");
+    const lightCaption = document.getElementById("lightbox-caption-text");
+    const lightTitle = document.getElementById("lightbox-album-title");
+
+    function openLightbox(item) {
+      lightImg.src = item.imageUrl;
+      lightCaption.innerText = item.caption;
+      lightTitle.innerText = `Album: ${item.album}`;
+      modal.classList.add("active");
+    }
+
+    closeBtn.addEventListener("click", () => {
+      modal.classList.remove("active");
+    });
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.classList.remove("active");
+      }
+    });
+  </script>
+</body>
+</html>

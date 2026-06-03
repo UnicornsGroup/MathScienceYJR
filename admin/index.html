@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | MathScienceYJR CMS</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/admin.css">
+
+  <!-- Safety Loader Hide Fallback Script -->
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loader = document.getElementById('loader');
+        if (loader && !loader.classList.contains('hidden')) {
+          loader.classList.add('hidden');
+          console.warn('Page loader hidden by safety fallback timeout.');
+        }
+      }, 1500);
+    });
+  </script>
+</head>
+<body>
+
+  <div class="admin-wrapper">
+    <!-- Sidebar Placeholder -->
+    <div id="admin-sidebar-container"></div>
+
+    <!-- Main Content Area -->
+    <main class="admin-main">
+      <!-- Admin Header Placeholder -->
+      <div id="admin-header-container"></div>
+
+      <!-- Dashboard Viewport -->
+      <div class="admin-content">
+        <!-- Statistics Widgets -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">📥</div>
+            <div class="stat-details">
+              <h3>Total Inquiries</h3>
+              <div class="number" id="stat-inquiries">-</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">✍️</div>
+            <div class="stat-details">
+              <h3>Admissions leads</h3>
+              <div class="number" id="stat-admissions">-</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📚</div>
+            <div class="stat-details">
+              <h3>Active Courses</h3>
+              <div class="number" id="stat-courses">-</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🖼️</div>
+            <div class="stat-details">
+              <h3>Gallery Media</h3>
+              <div class="number" id="stat-gallery">-</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">💬</div>
+            <div class="stat-details">
+              <h3>Testimonials</h3>
+              <div class="number" id="stat-testimonials">-</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📌</div>
+            <div class="stat-details">
+              <h3>Active Notices</h3>
+              <div class="number" id="stat-notices">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick actions & Submissions -->
+        <div class="content-box">
+          <div class="box-header">
+            <h2>Recent Submissions / Leads</h2>
+            <a href="../admin/forms.html" class="btn btn-outline" style="padding:0.4rem 0.8rem; font-size:0.8rem;">View All Submissions</a>
+          </div>
+          <div class="table-responsive">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Form Type</th>
+                  <th>Student / Contact Name</th>
+                  <th>Data Summary</th>
+                  <th>Status</th>
+                  <th>Submitted Date</th>
+                </tr>
+              </thead>
+              <tbody id="recent-leads-tbody">
+                <tr>
+                  <td colspan="5" style="text-align: center; color: var(--text-muted);">Fetching leads history...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="../admin/js/admin-core.js"></script>
+  <script type="module">
+    import { getCollection, listenCollection } from '../firebase/firebase-config.js';
+
+    document.addEventListener("DOMContentLoaded", () => {
+      initDashboardStats();
+    });
+
+    async function initDashboardStats() {
+      try {
+        // Stats loaders
+        const courses = await getCollection("courses");
+        const gallery = await getCollection("gallery");
+        const testimonials = await getCollection("testimonials");
+        const announcements = await getCollection("announcements");
+
+        document.getElementById("stat-courses").innerText = courses.length;
+        document.getElementById("stat-gallery").innerText = gallery.length;
+        document.getElementById("stat-testimonials").innerText = testimonials.length;
+        document.getElementById("stat-notices").innerText = announcements.filter(a => a.visible).length;
+
+        // Submissions listener for real-time counts and recent grid loading
+        listenCollection("submissions", (subs) => {
+          const inquiries = subs.filter(s => s.formId === "inquiry");
+          const admissions = subs.filter(s => s.formId === "admission");
+
+          document.getElementById("stat-inquiries").innerText = inquiries.length;
+          document.getElementById("stat-admissions").innerText = admissions.length;
+
+          // Render top 5 recent leads
+          const tbody = document.getElementById("recent-leads-tbody");
+          if (!tbody) return;
+
+          if (subs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--text-muted);">No entries recorded.</td></tr>`;
+            return;
+          }
+
+          tbody.innerHTML = '';
+          subs.slice(0, 5).forEach(lead => {
+            const tr = document.createElement("tr");
+            const dataVals = lead.data;
+            const primaryName = dataVals.fullName || dataVals.studentName || "Anonymous";
+            
+            // Generate minor summary from JSON payload
+            const keys = Object.keys(dataVals).filter(k => k !== "fullName" && k !== "studentName");
+            const summaryText = keys.slice(0, 2).map(k => `${k}: ${dataVals[k]}`).join(', ');
+
+            const dateStr = new Date(lead.createdAt).toLocaleDateString('en-IN', {
+              day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+            });
+
+            tr.innerHTML = `
+              <td><span class="category-badge">${lead.formId.toUpperCase()}</span></td>
+              <td><strong>${primaryName}</strong></td>
+              <td><span style="font-size:0.85rem; color:#94a3b8;">${summaryText}</span></td>
+              <td><span class="badge ${lead.status || 'new'}">${lead.status || 'new'}</span></td>
+              <td>${dateStr}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        });
+
+      } catch (err) {
+        console.error("Dashboard statistics loading error: ", err);
+      }
+    }
+  </script>
+</body>
+</html>

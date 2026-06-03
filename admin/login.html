@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login | MathScienceYJR CMS</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/admin.css">
+
+  <!-- Safety Loader Hide Fallback Script -->
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loader = document.getElementById('loader');
+        if (loader && !loader.classList.contains('hidden')) {
+          loader.classList.add('hidden');
+          console.warn('Page loader hidden by safety fallback timeout.');
+        }
+      }, 1500);
+    });
+  </script>
+</head>
+<body style="background-color: #090d16;">
+
+  <div class="flex-center" style="min-height: 100vh;">
+    <div class="login-box">
+      <div class="login-title">
+        <h1 style="font-family: var(--font-heading); font-weight:800; font-size:1.85rem;">MathScience<span>YJR</span></h1>
+        <p style="color: var(--text-muted); font-size:0.875rem; margin-top:0.25rem;">Administrator Management Panel</p>
+      </div>
+
+      <form id="admin-login-form">
+        <div class="form-group">
+          <label for="email" class="form-label" style="color: #cbd5e1;">Admin Email Address</label>
+          <input type="email" id="email" class="form-control" style="background-color: #1e293b; border-color:#334155; color:#fff;" placeholder="admin@yjr.com" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 2rem;">
+          <label for="password" class="form-label" style="color: #cbd5e1;">Security Password</label>
+          <input type="password" id="password" class="form-control" style="background-color: #1e293b; border-color:#334155; color:#fff;" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; border-radius: var(--border-radius-sm);">
+          Authenticate Session
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="../admin/js/admin-core.js"></script>
+  <script type="module">
+    import { adminLogin } from '../firebase/firebase-config.js';
+
+    const loginForm = document.getElementById("admin-login-form");
+    if (loginForm) {
+      loginForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("email").value;
+        const pass = document.getElementById("password").value;
+        const btn = loginForm.querySelector("button");
+
+        btn.disabled = true;
+        btn.innerText = "Verifying Credentials...";
+
+        try {
+          await adminLogin(email, pass);
+          window.location.href = "index.html";
+        } catch (err) {
+          alert(err.message || "Failed to log in.");
+          btn.disabled = false;
+          btn.innerText = "Authenticate Session";
+        }
+      });
+    }
+  </script>
+</body>
+</html>

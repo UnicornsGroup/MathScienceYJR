@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Us | MathScienceYJR</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <style>
+    .map-frame {
+      width: 100%;
+      height: 400px;
+      border: 0;
+      border-radius: var(--border-radius-md);
+      box-shadow: var(--glass-shadow);
+      border: 1px solid var(--border-color);
+    }
+  </style>
+
+  <!-- Safety Loader Hide Fallback Script -->
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loader = document.getElementById('loader');
+        if (loader && !loader.classList.contains('hidden')) {
+          loader.classList.add('hidden');
+          console.warn('Page loader hidden by safety fallback timeout.');
+        }
+      }, 1500);
+    });
+  </script>
+</head>
+<body>
+
+  <!-- Page Loader -->
+  <div class="page-loader" id="loader">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Global Header -->
+  <div id="global-header"></div>
+
+  <!-- Header Banner -->
+  <section class="section-padding reveal active" style="padding-top: 140px; background: linear-gradient(180deg, rgba(37, 99, 235, 0.05), transparent); text-align: center;">
+    <div class="container">
+      <span class="category-badge" style="margin-bottom: 1rem;">Get In Touch</span>
+      <h1 style="font-size: 3rem; margin-bottom: 1rem;">Connect with Our Mentors</h1>
+      <p class="text-muted" style="max-width: 600px; margin: 0 auto;">Have queries about our curriculum paths or fee schedules? Send a message or visit our campus centre.</p>
+    </div>
+  </section>
+
+  <!-- Content split grid -->
+  <section class="section-padding reveal" style="padding-top: 0;">
+    <div class="container grid-2">
+      <!-- Contact card info -->
+      <div>
+        <h2 style="font-size: 2rem; margin-bottom: 2rem;">Contact Details</h2>
+        <div style="display:flex; flex-direction:column; gap:1.5rem;">
+          <div class="glass-card" style="padding:1.5rem; display:flex; gap:1.25rem; align-items:center;">
+            <div style="font-size:2rem;">📞</div>
+            <div>
+              <h4 style="font-size:1.1rem;">Call or WhatsApp</h4>
+              <p class="text-muted" id="contact-phone-display">+91 98765 43210</p>
+            </div>
+          </div>
+          <div class="glass-card" style="padding:1.5rem; display:flex; gap:1.25rem; align-items:center;">
+            <div style="font-size:2rem;">✉️</div>
+            <div>
+              <h4 style="font-size:1.1rem;">Email Address</h4>
+              <p class="text-muted" id="contact-email-display">admissions@mathscienceyjr.com</p>
+            </div>
+          </div>
+          <div class="glass-card" style="padding:1.5rem; display:flex; gap:1.25rem; align-items:center;">
+            <div style="font-size:2rem;">📍</div>
+            <div>
+              <h4 style="font-size:1.1rem;">Campus Centre</h4>
+              <p class="text-muted" id="contact-address-display">YJR Towers, 4th Floor, Noida Sector 62, UP</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inquiry form holder -->
+      <div class="glass-card" style="padding: 2.5rem;" id="inquiry-form-container">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Google Map Section -->
+  <section class="section-padding reveal" style="padding-top: 0;">
+    <div class="container">
+      <iframe class="map-frame" id="contact-map-iframe" src="" allowfullscreen="" loading="lazy"></iframe>
+    </div>
+  </section>
+
+  <!-- Global Footer -->
+  <div id="global-footer"></div>
+
+  <!-- WhatsApp Bubble -->
+  <div id="global-whatsapp"></div>
+
+  <script type="module" src="../assets/js/main.js"></script>
+  <script type="module">
+    import { getDocument } from '../firebase/firebase-config.js';
+    import { renderForm } from '../assets/js/modules/form-renderer.js';
+
+    if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", initContactPage); } else { initContactPage(); }
+
+    async function initContactPage() {
+      // Load Dynamic Inquiry Form
+      await renderForm("inquiry", "inquiry-form-container");
+
+      // Fetch Global settings to bind contact information and Google map link
+      try {
+        const settings = await getDocument("settings", "global");
+        if (settings) {
+          const phoneEl = document.getElementById("contact-phone-display");
+          const emailEl = document.getElementById("contact-email-display");
+          const addrEl = document.getElementById("contact-address-display");
+          const mapEl = document.getElementById("contact-map-iframe");
+
+          if (phoneEl) phoneEl.innerText = settings.contactNumber;
+          if (emailEl) emailEl.innerText = settings.email;
+          if (addrEl) addrEl.innerText = settings.address;
+          if (mapEl && settings.googleMapLink) {
+            mapEl.src = settings.googleMapLink;
+          }
+        }
+      } catch (err) {
+        console.error("Contact details load error: ", err);
+      }
+    }
+  </script>
+</body>
+</html>

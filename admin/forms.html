@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Form Builder & Leads | MathScienceYJR CMS</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/admin.css">
+
+  <!-- Safety Loader Hide Fallback Script -->
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loader = document.getElementById('loader');
+        if (loader && !loader.classList.contains('hidden')) {
+          loader.classList.add('hidden');
+          console.warn('Page loader hidden by safety fallback timeout.');
+        }
+      }, 1500);
+    });
+  </script>
+</head>
+<body>
+
+  <div class="admin-wrapper">
+    <!-- Sidebar -->
+    <div id="admin-sidebar-container"></div>
+
+    <main class="admin-main">
+      <!-- Admin Header -->
+      <div id="admin-header-container"></div>
+
+      <div class="admin-content">
+        <!-- Selector row -->
+        <div style="display:flex; gap:1rem; justify-content:center; margin-bottom:2rem; flex-wrap:wrap;" id="admin-form-toggles">
+          <button class="btn btn-primary" data-form="admission">Admission Registration</button>
+          <button class="btn btn-outline" data-form="inquiry">Quick Inquiry</button>
+          <button class="btn btn-outline" data-form="demoClass">Demo Class Request</button>
+          <button class="btn btn-outline" data-form="scholarship">YST Scholarship Form</button>
+        </div>
+
+        <div class="builder-grid">
+          <!-- Left: Submissions Leads Log -->
+          <div>
+            <div class="content-box">
+              <div class="box-header">
+                <h2>Submission Leads Log</h2>
+                <div style="display:flex; gap:0.5rem;">
+                  <button id="export-csv-btn" class="btn btn-outline" style="padding:0.4rem 0.8rem; font-size:0.8rem;">📥 Export CSV</button>
+                </div>
+              </div>
+
+              <!-- Search and filter -->
+              <div class="table-actions">
+                <div class="search-bar" style="max-width: 250px;">
+                  <input type="text" id="leads-search-input" placeholder="Search by name...">
+                </div>
+                <div>
+                  <select id="leads-filter-status" class="form-control" style="background-color:#090d16; border-color:#1e293b; color:#fff; padding:0.4rem 0.8rem; font-size:0.9rem;">
+                    <option value="all">All Statuses</option>
+                    <option value="new">New</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="followUp">Follow Up</option>
+                    <option value="admitted">Admitted</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Submitted Info</th>
+                      <th>Status State</th>
+                      <th>Admin Comments Notes</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="leads-admin-tbody">
+                    <tr>
+                      <td colspan="4" style="text-align:center; color:var(--text-muted);">Fetching form submissions...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Dynamic Form Builder Settings -->
+          <div>
+            <div class="content-box">
+              <div class="box-header" style="flex-direction:column; align-items:flex-start; gap:0.5rem;">
+                <h2 id="builder-form-title">Form Properties</h2>
+                <div style="display:flex; align-items:center; gap:0.5rem; width:100%; margin-top:0.5rem;">
+                  <input type="checkbox" id="form-active-toggle" style="width:18px; height:18px; cursor:pointer;">
+                  <label for="form-active-toggle" style="color:#cbd5e1; cursor:pointer; font-size:0.9rem;">Form Active (Online)</label>
+                </div>
+              </div>
+
+              <h3 style="font-size:1rem; color:#fff; border-bottom:1px solid #1e293b; padding-bottom:0.5rem; margin-bottom:1rem;">Form Fields List</h3>
+              
+              <div style="display:flex; flex-direction:column; gap:0.75rem; margin-bottom:2rem;" id="builder-fields-list">
+                <!-- Fields rendered dynamically -->
+              </div>
+
+              <button class="btn btn-outline" id="open-add-field-btn" style="width:100%; font-size:0.9rem;">➕ Add New Field</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add Field Modal -->
+  <div class="modal-overlay" id="field-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Add Form Field</h3>
+        <button class="modal-close" id="close-field-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="field-editor-form">
+          <div class="form-group">
+            <label for="f-id" class="form-label">Field ID (no spaces, alphanumeric)</label>
+            <input type="text" id="f-id" class="form-control" placeholder="parentContact" required>
+          </div>
+          <div class="form-group" style="margin-top:1rem;">
+            <label for="f-label" class="form-label">Field Label Text</label>
+            <input type="text" id="f-label" class="form-control" placeholder="Parent Contact Number" required>
+          </div>
+          <div class="grid-2" style="margin-top:1rem;">
+            <div class="form-group">
+              <label for="f-type" class="form-label">Input Type</label>
+              <select id="f-type" class="form-control">
+                <option value="text">Text Box</option>
+                <option value="email">Email</option>
+                <option value="tel">Telephone / Mobile</option>
+                <option value="date">Date Picker</option>
+                <option value="number">Number Box</option>
+                <option value="select">Dropdown Select</option>
+                <option value="textarea">Text Area</option>
+              </select>
+            </div>
+            <div class="form-group" style="display:flex; align-items:flex-end; padding-bottom:10px;">
+              <div style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                <input type="checkbox" id="f-req" style="width:18px; height:18px; cursor:pointer;">
+                <label for="f-req" style="color:#cbd5e1; cursor:pointer;">Required field</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:1rem; display:none;" id="select-options-group">
+            <label for="f-options" class="form-label">Select Options (comma-separated list)</label>
+            <input type="text" id="f-options" class="form-control" placeholder="Option 1, Option 2, Option 3">
+          </div>
+
+          <div style="margin-top:2.5rem; display:flex; justify-content:flex-end; gap:1rem;">
+            <button type="button" class="btn btn-outline" id="cancel-field-modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add Field</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../admin/js/admin-core.js"></script>
+  <script type="module">
+    import { getDocument, setDocument, getCollection, updateDocument, deleteDocument, listenCollection } from '../firebase/firebase-config.js';
+
+    let currentFormId = "admission";
+    let formSchema = null;
+    let submissionsList = [];
+
+    if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", initFormPanel); } else { initFormPanel(); }
+
+    async function initFormPanel() {
+      setupFormToggles();
+      await loadFormData();
+
+      // Listen to submissions real-time
+      listenCollection("submissions", (subs) => {
+        submissionsList = subs;
+        renderSubmissions();
+      });
+    }
+
+    function setupFormToggles() {
+      const buttons = document.querySelectorAll("#admin-form-toggles button");
+      buttons.forEach(btn => {
+        btn.addEventListener("click", async () => {
+          buttons.forEach(b => {
+            b.classList.remove("btn-primary");
+            b.classList.add("btn-outline");
+          });
+          btn.classList.add("btn-primary");
+          btn.classList.remove("btn-outline");
+
+          currentFormId = btn.getAttribute("data-form");
+          await loadFormData();
+          renderSubmissions();
+        });
+      });
+    }
+
+    async function loadFormData() {
+      try {
+        formSchema = await getDocument("forms", currentFormId);
+        if (formSchema) {
+          document.getElementById("builder-form-title").innerText = `${formSchema.formTitle}`;
+          document.getElementById("form-active-toggle").checked = formSchema.enabled;
+          
+          renderBuilderFields();
+        }
+      } catch (err) {
+        console.error("Load form schema error: ", err);
+      }
+    }
+
+    // Toggle form active online status
+    document.getElementById("form-active-toggle").addEventListener("change", async (e) => {
+      if (!formSchema) return;
+      formSchema.enabled = e.target.checked;
+      await setDocument("forms", currentFormId, formSchema);
+    });
+
+    // 1. RENDER FORM BUILDER FIELDS LIST
+    function renderBuilderFields() {
+      const container = document.getElementById("builder-fields-list");
+      if (!container || !formSchema) return;
+
+      container.innerHTML = '';
+      
+      const fields = [...formSchema.fields].sort((a, b) => a.order - b.order);
+
+      fields.forEach((field, idx) => {
+        const item = document.createElement("div");
+        item.className = "field-item";
+        item.innerHTML = `
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <button class="order-btn field-order-up" data-idx="${idx}" style="font-size:0.6rem; padding:0.1rem 0.3rem;">▲</button>
+              <button class="order-btn field-order-down" data-idx="${idx}" style="font-size:0.6rem; padding:0.1rem 0.3rem;">▼</button>
+            </div>
+            <div>
+              <h4 style="font-size:0.9rem; color:#fff;">${field.label}</h4>
+              <span style="font-size:0.7rem; color:var(--text-muted);">${field.type.toUpperCase()} ${field.required ? '• Required' : ''}</span>
+            </div>
+          </div>
+          <button class="action-btn delete-field-btn" data-id="${field.id}">🗑️</button>
+        `;
+        container.appendChild(item);
+      });
+
+      // Bind Field List Actions
+      bindFieldListActions(fields);
+    }
+
+    function bindFieldListActions(fields) {
+      // Reordering fields
+      document.querySelectorAll(".field-order-up").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const idx = parseInt(btn.getAttribute("data-idx"));
+          if (idx > 0) {
+            const temp = fields[idx];
+            fields[idx] = fields[idx - 1];
+            fields[idx - 1] = temp;
+            await saveFieldsList(fields);
+          }
+        });
+      });
+
+      document.querySelectorAll(".field-order-down").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const idx = parseInt(btn.getAttribute("data-idx"));
+          if (idx < fields.length - 1) {
+            const temp = fields[idx];
+            fields[idx] = fields[idx + 1];
+            fields[idx + 1] = temp;
+            await saveFieldsList(fields);
+          }
+        });
+      });
+
+      // Delete Field
+      document.querySelectorAll(".delete-field-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          if (confirm("Are you sure you want to delete this field from the form layout?")) {
+            const updated = fields.filter(f => f.id !== id);
+            await saveFieldsList(updated);
+          }
+        });
+      });
+    }
+
+    async function saveFieldsList(fields) {
+      // Re-assign order numbers
+      fields.forEach((f, idx) => f.order = idx + 1);
+      formSchema.fields = fields;
+      await setDocument("forms", currentFormId, formSchema);
+      loadFormData();
+    }
+
+    // Modal Control for Add Field
+    const modal = document.getElementById("field-modal");
+    const openBtn = document.getElementById("open-add-field-btn");
+    const closeBtn = document.getElementById("close-field-modal");
+    const cancelBtn = document.getElementById("cancel-field-modal");
+    const typeSelect = document.getElementById("f-type");
+    const optionsGroup = document.getElementById("select-options-group");
+    const editorForm = document.getElementById("field-editor-form");
+
+    openBtn.addEventListener("click", () => {
+      editorForm.reset();
+      optionsGroup.style.display = "none";
+      modal.classList.add("active");
+    });
+    closeBtn.addEventListener("click", () => modal.classList.remove("active"));
+    cancelBtn.addEventListener("click", () => modal.classList.remove("active"));
+
+    typeSelect.addEventListener("change", (e) => {
+      if (e.target.value === "select") {
+        optionsGroup.style.display = "block";
+      } else {
+        optionsGroup.style.display = "none";
+      }
+    });
+
+    editorForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      
+      const newField = {
+        id: document.getElementById("f-id").value.trim(),
+        label: document.getElementById("f-label").value,
+        type: document.getElementById("f-type").value,
+        required: document.getElementById("f-req").checked,
+        order: formSchema.fields.length + 1
+      };
+
+      if (newField.type === "select") {
+        const rawOpts = document.getElementById("f-options").value;
+        newField.options = rawOpts ? rawOpts.split(',').map(o => o.trim()) : [];
+      }
+
+      formSchema.fields.push(newField);
+      await setDocument("forms", currentFormId, formSchema);
+      modal.classList.remove("active");
+      loadFormData();
+    });
+
+
+    // 2. RENDER SUBMISSIONS LEADS
+    function renderSubmissions() {
+      const tbody = document.getElementById("leads-admin-tbody");
+      if (!tbody) return;
+
+      const qSearch = document.getElementById("leads-search-input").value.toLowerCase();
+      const fStatus = document.getElementById("leads-filter-status").value;
+
+      // Filter submissions matching selected Form and Search values
+      let filtered = submissionsList.filter(s => s.formId === currentFormId);
+
+      if (fStatus !== "all") {
+        filtered = filtered.filter(s => s.status === fStatus);
+      }
+
+      if (qSearch) {
+        filtered = filtered.filter(s => {
+          const vals = Object.values(s.data).join(' ').toLowerCase();
+          return vals.includes(qSearch);
+        });
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No submissions recorded for this selection.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = '';
+      filtered.forEach(sub => {
+        const tr = document.createElement("tr");
+        
+        // Build beautiful description table listing all payload values
+        const dataKeys = Object.keys(sub.data);
+        const dataRows = dataKeys.map(k => `
+          <div style="font-size:0.8rem; margin-bottom: 0.15rem;">
+            <strong style="color:var(--text-muted); font-weight:600;">${k}:</strong> 
+            <span style="color:#cbd5e1;">${sub.data[k]}</span>
+          </div>
+        `).join('');
+
+        const createdTime = new Date(sub.createdAt).toLocaleString('en-IN', {
+          day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+
+        tr.innerHTML = `
+          <td>
+            <div style="margin-bottom:0.5rem; font-size:0.8rem; color:var(--accent);">⏱️ Submitted: ${createdTime}</div>
+            ${dataRows}
+          </td>
+          <td>
+            <select class="form-control change-lead-status" data-id="${sub.id}" style="font-size:0.8rem; background-color:#090d16; border-color:#1e293b; color:#fff; width:130px;">
+              <option value="new" ${sub.status === 'new' ? 'selected' : ''}>New</option>
+              <option value="contacted" ${sub.status === 'contacted' ? 'selected' : ''}>Contacted</option>
+              <option value="followUp" ${sub.status === 'followUp' ? 'selected' : ''}>Follow Up</option>
+              <option value="admitted" ${sub.status === 'admitted' ? 'selected' : ''}>Admitted</option>
+            </select>
+          </td>
+          <td>
+            <textarea class="form-control change-lead-notes" data-id="${sub.id}" placeholder="Type notes here..." style="font-size:0.8rem; background-color:#090d16; border-color:#1e293b; color:#fff; min-height:60px; width:180px;">${sub.notes || ''}</textarea>
+          </td>
+          <td>
+            <button class="action-btn delete-lead-btn" data-id="${sub.id}">🗑️ Delete</button>
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+
+      bindLeadsActions();
+    }
+
+    function bindLeadsActions() {
+      // Change status listener
+      document.querySelectorAll(".change-lead-status").forEach(select => {
+        select.addEventListener("change", async () => {
+          const id = select.getAttribute("data-id");
+          const newStatus = select.value;
+          await updateDocument("submissions", id, { status: newStatus });
+        });
+      });
+
+      // Change notes listener (triggers save on blur out)
+      document.querySelectorAll(".change-lead-notes").forEach(textarea => {
+        textarea.addEventListener("blur", async () => {
+          const id = textarea.getAttribute("data-id");
+          const notesText = textarea.value;
+          await updateDocument("submissions", id, { notes: notesText });
+        });
+      });
+
+      // Delete Lead
+      document.querySelectorAll(".delete-lead-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          if (confirm("Permanently delete this submission record?")) {
+            await deleteDocument("submissions", id);
+          }
+        });
+      });
+    }
+
+    // Input listeners for real-time search/filter
+    document.getElementById("leads-search-input").addEventListener("input", renderSubmissions);
+    document.getElementById("leads-filter-status").addEventListener("change", renderSubmissions);
+
+    // Export CSV Engine
+    document.getElementById("export-csv-btn").addEventListener("click", () => {
+      const filtered = submissionsList.filter(s => s.formId === currentFormId);
+      if (filtered.length === 0) {
+        alert("No records to export.");
+        return;
+      }
+
+      // Collect all keys from submissions data to construct header row
+      const dataKeys = [...new Set(filtered.flatMap(s => Object.keys(s.data)))];
+      const headers = ["Submission ID", "Status", "Notes", "Submitted Date", ...dataKeys];
+      
+      const rows = filtered.map(sub => {
+        const row = [
+          sub.id,
+          sub.status,
+          `"${(sub.notes || '').replace(/"/g, '""')}"`,
+          sub.createdAt,
+          ...dataKeys.map(k => {
+            const val = sub.data[k] || '';
+            return `"${String(val).replace(/"/g, '""')}"`;
+          })
+        ];
+        return row.join(',');
+      });
+
+      const csvContent = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute("href", url);
+      link.setAttribute("download", `YJR_${currentFormId.toUpperCase()}_leads_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Course Management | MathScienceYJR CMS</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/admin.css">
+
+  <!-- Safety Loader Hide Fallback Script -->
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loader = document.getElementById('loader');
+        if (loader && !loader.classList.contains('hidden')) {
+          loader.classList.add('hidden');
+          console.warn('Page loader hidden by safety fallback timeout.');
+        }
+      }, 1500);
+    });
+  </script>
+</head>
+<body>
+
+  <div class="admin-wrapper">
+    <!-- Sidebar -->
+    <div id="admin-sidebar-container"></div>
+
+    <main class="admin-main">
+      <!-- Admin Header -->
+      <div id="admin-header-container"></div>
+
+      <div class="admin-content">
+        <!-- Control actions row -->
+        <div class="table-actions">
+          <div class="search-bar">
+            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <input type="text" id="course-search" placeholder="Search courses by name or category...">
+          </div>
+          <button class="btn btn-primary" id="open-add-course-modal">➕ Add New Course</button>
+        </div>
+
+        <!-- Course List Box -->
+        <div class="content-box">
+          <div class="table-responsive">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Course Banner</th>
+                  <th>Course Title</th>
+                  <th>Category</th>
+                  <th>Duration</th>
+                  <th>Tuition Fees</th>
+                  <th>Visibility</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="courses-admin-tbody">
+                <tr>
+                  <td colspan="7" style="text-align:center; color:var(--text-muted);">Fetching courses lists...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Course Form Modal -->
+  <div class="modal-overlay" id="course-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 id="modal-title-text">Add New Course</h3>
+        <button class="modal-close" id="close-course-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="course-editor-form">
+          <input type="hidden" id="course-edit-id">
+          
+          <div class="form-group">
+            <label for="course-title-field" class="form-label">Course Title</label>
+            <input type="text" id="course-title-field" class="form-control" placeholder="Olympiad Mathematics Foundation" required>
+          </div>
+          
+          <div class="grid-2" style="margin-top: 1rem;">
+            <div class="form-group">
+              <label for="course-category-field" class="form-label">Category / Stream</label>
+              <select id="course-category-field" class="form-control">
+                <option value="Mathematics">Mathematics</option>
+                <option value="Physics">Physics</option>
+                <option value="Chemistry">Chemistry</option>
+                <option value="Biology">Biology</option>
+                <option value="General STEM">General STEM</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="course-duration-field" class="form-label">Duration</label>
+              <input type="text" id="course-duration-field" class="form-control" placeholder="1 Year" required>
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-top: 1rem;">
+            <div class="form-group">
+              <label for="course-fees-field" class="form-label">Tuition Fees (e.g. ₹45,000)</label>
+              <input type="text" id="course-fees-field" class="form-control" placeholder="₹45,000" required>
+            </div>
+            <div class="form-group">
+              <label for="course-image-field" class="form-label">Banner Image URL</label>
+              <input type="text" id="course-image-field" class="form-control" placeholder="https://...">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 1rem;">
+            <label for="course-desc-field" class="form-label">Short Description</label>
+            <textarea id="course-desc-field" class="form-control" placeholder="Detail course goals and methodology focus..." required></textarea>
+          </div>
+
+          <div class="form-group" style="margin-top: 1rem;">
+            <label for="course-syllabus-field" class="form-label">Syllabus Highlights (comma-separated topics)</label>
+            <input type="text" id="course-syllabus-field" class="form-control" placeholder="Calculus, Geometry, Combinatorics">
+          </div>
+
+          <div class="form-group" style="margin-top: 1.5rem; display:flex; align-items:center; gap:0.5rem;">
+            <input type="checkbox" id="course-visible-field" style="width:20px; height:20px; cursor:pointer;" checked>
+            <label for="course-visible-field" style="color:#cbd5e1; cursor:pointer;">Visible to public listings</label>
+          </div>
+
+          <div style="margin-top: 2rem; display:flex; justify-content:flex-end; gap:1rem;">
+            <button type="button" class="btn btn-outline" id="cancel-course-modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Course</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../admin/js/admin-core.js"></script>
+  <script type="module">
+    import { getCollection, addDocument, updateDocument, deleteDocument } from '../firebase/firebase-config.js';
+
+    let coursesList = [];
+
+    if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", loadCoursesManager); } else { loadCoursesManager(); }
+
+    async function loadCoursesManager() {
+      const tbody = document.getElementById("courses-admin-tbody");
+      if (!tbody) return;
+
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Fetching courses from database...</td></tr>`;
+
+      try {
+        coursesList = await getCollection("courses");
+        renderAdminCourses(coursesList);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#ef4444;">Error retrieving database.</td></tr>`;
+      }
+    }
+
+    function renderAdminCourses(list) {
+      const tbody = document.getElementById("courses-admin-tbody");
+      if (!tbody) return;
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">No courses listed in catalog.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = '';
+      list.forEach(course => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><img src="${course.imageUrl || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=150'}" style="width:70px; height:45px; object-fit:cover; border-radius:4px; border:1px solid #1e293b;"></td>
+          <td><strong>${course.title}</strong></td>
+          <td><span class="category-badge">${course.category}</span></td>
+          <td>${course.duration}</td>
+          <td><span style="color:#22c55e; font-weight:600;">${course.fees}</span></td>
+          <td>
+            <button class="action-btn toggle-visibility" data-id="${course.id}" data-visible="${course.visible}" style="color: ${course.visible ? '#22c55e' : '#64748b'}; font-size:1.25rem;">
+              ${course.visible ? '👁️ Live' : '👁️‍🗨️ Hidden'}
+            </button>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <button class="action-btn edit-course-btn" data-id="${course.id}">✏️ Edit</button>
+              <button class="action-btn delete-course-btn" data-id="${course.id}">🗑️ Delete</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Bind dynamic actions
+      bindTableActions();
+    }
+
+    function bindTableActions() {
+      // Toggle Visibility
+      document.querySelectorAll(".toggle-visibility").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          const curVis = btn.getAttribute("data-visible") === "true";
+          btn.disabled = true;
+          await updateDocument("courses", id, { visible: !curVis });
+          await loadCoursesManager();
+        });
+      });
+
+      // Edit Course
+      document.querySelectorAll(".edit-course-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-id");
+          const course = coursesList.find(c => c.id === id);
+          if (course) {
+            openModal(course);
+          }
+        });
+      });
+
+      // Delete Course
+      document.querySelectorAll(".delete-course-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          if (confirm("Are you sure you want to permanently delete this course?")) {
+            await deleteDocument("courses", id);
+            await loadCoursesManager();
+          }
+        });
+      });
+    }
+
+    // Modal Control Logic
+    const modal = document.getElementById("course-modal");
+    const openAddBtn = document.getElementById("open-add-course-modal");
+    const closeBtn = document.getElementById("close-course-modal");
+    const cancelBtn = document.getElementById("cancel-course-modal");
+    const editorForm = document.getElementById("course-editor-form");
+
+    openAddBtn.addEventListener("click", () => openModal(null));
+    closeBtn.addEventListener("click", closeModal);
+    cancelBtn.addEventListener("click", closeModal);
+
+    function openModal(course = null) {
+      editorForm.reset();
+      
+      if (course) {
+        document.getElementById("modal-title-text").innerText = "Edit Course Details";
+        document.getElementById("course-edit-id").value = course.id;
+        document.getElementById("course-title-field").value = course.title;
+        document.getElementById("course-category-field").value = course.category;
+        document.getElementById("course-duration-field").value = course.duration;
+        document.getElementById("course-fees-field").value = course.fees;
+        document.getElementById("course-image-field").value = course.imageUrl || '';
+        document.getElementById("course-desc-field").value = course.description;
+        document.getElementById("course-syllabus-field").value = course.syllabus ? course.syllabus.join(', ') : '';
+        document.getElementById("course-visible-field").checked = course.visible;
+      } else {
+        document.getElementById("modal-title-text").innerText = "Add New Course";
+        document.getElementById("course-edit-id").value = '';
+        document.getElementById("course-visible-field").checked = true;
+      }
+
+      modal.classList.add("active");
+    }
+
+    function closeModal() {
+      modal.classList.remove("active");
+    }
+
+    // Form Submit Handler
+    editorForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const saveBtn = editorForm.querySelector("button[type='submit']");
+      saveBtn.disabled = true;
+      saveBtn.innerText = "Saving Course...";
+
+      const id = document.getElementById("course-edit-id").value;
+      const syllabusRaw = document.getElementById("course-syllabus-field").value;
+      const syllabusArray = syllabusRaw ? syllabusRaw.split(',').map(s => s.trim()) : [];
+
+      const payload = {
+        title: document.getElementById("course-title-field").value,
+        category: document.getElementById("course-category-field").value,
+        duration: document.getElementById("course-duration-field").value,
+        fees: document.getElementById("course-fees-field").value,
+        imageUrl: document.getElementById("course-image-field").value,
+        description: document.getElementById("course-desc-field").value,
+        syllabus: syllabusArray,
+        visible: document.getElementById("course-visible-field").checked
+      };
+
+      try {
+        if (id) {
+          // Update
+          await updateDocument("courses", id, payload);
+        } else {
+          // Create
+          await addDocument("courses", payload);
+        }
+        closeModal();
+        await loadCoursesManager();
+      } catch (err) {
+        alert("Error saving course to database.");
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerText = "Save Course";
+      }
+    });
+
+    // Search filter
+    document.getElementById("course-search").addEventListener("input", (e) => {
+      const q = e.target.value.toLowerCase();
+      const filtered = coursesList.filter(c => 
+        c.title.toLowerCase().includes(q) || 
+        c.category.toLowerCase().includes(q)
+      );
+      renderAdminCourses(filtered);
+    });
+  </script>
+</body>
+</html>

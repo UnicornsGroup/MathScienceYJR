@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Homepage Control | MathScienceYJR CMS</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/admin.css">
+  <style>
+    .order-btn {
+      background-color: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .order-btn:hover {
+      background-color: var(--secondary);
+      color: #fff;
+    }
+  </style>
+
+  <!-- Safety Loader Hide Fallback Script -->
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loader = document.getElementById('loader');
+        if (loader && !loader.classList.contains('hidden')) {
+          loader.classList.add('hidden');
+          console.warn('Page loader hidden by safety fallback timeout.');
+        }
+      }, 1500);
+    });
+  </script>
+</head>
+<body>
+
+  <div class="admin-wrapper">
+    <!-- Sidebar -->
+    <div id="admin-sidebar-container"></div>
+
+    <main class="admin-main">
+      <!-- Admin Header -->
+      <div id="admin-header-container"></div>
+
+      <div class="admin-content">
+        <!-- Hero Section Editor -->
+        <div class="content-box">
+          <div class="box-header">
+            <h2>Edit Homepage Hero Banner</h2>
+          </div>
+          <form id="hero-settings-form">
+            <div class="form-group">
+              <label for="hero-title-input" class="form-label">Hero Title</label>
+              <input type="text" id="hero-title-input" class="form-control" style="background-color: #090d16; border-color: #1e293b; color:#fff;" required>
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+              <label for="hero-desc-input" class="form-label">Hero Description</label>
+              <textarea id="hero-desc-input" class="form-control" style="background-color: #090d16; border-color: #1e293b; color:#fff;" required></textarea>
+            </div>
+            <div class="grid-2" style="margin-top: 1rem;">
+              <div class="form-group">
+                <label for="hero-img-input" class="form-label">Hero Banner Image URL</label>
+                <input type="text" id="hero-img-input" class="form-control" style="background-color: #090d16; border-color: #1e293b; color:#fff;">
+              </div>
+              <div class="form-group">
+                <label for="hero-cta-input" class="form-label">CTA Button Label</label>
+                <input type="text" id="hero-cta-input" class="form-control" style="background-color: #090d16; border-color: #1e293b; color:#fff;">
+              </div>
+            </div>
+            <div style="margin-top: 1.5rem; display:flex; justify-content:flex-end;">
+              <button type="submit" class="btn btn-primary">Update Hero Banner</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Sections Ordering and Toggles -->
+        <div class="content-box">
+          <div class="box-header">
+            <h2>Manage Homepage Sections</h2>
+            <span style="font-size:0.8rem; color:var(--text-muted);">Reorder and Toggle ON/OFF homepage modules</span>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:1rem;" id="sections-editor-container">
+            <!-- Loaded dynamically with controls -->
+            <p style="text-align:center; padding: 2rem; color:var(--text-muted);">Loading sections list...</p>
+          </div>
+
+          <div style="margin-top: 2rem; display:flex; justify-content:flex-end;">
+            <button id="save-sections-layout-btn" class="btn btn-primary">Save Section Layout</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="../admin/js/admin-core.js"></script>
+  <script type="module">
+    import { getDocument, setDocument } from '../firebase/firebase-config.js';
+
+    let currentConfig = null;
+
+    const initDynamicPage_frmea = async () => {
+      await loadHomepageConfig();
+    };
+if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", initDynamicPage_frmea); } else { initDynamicPage_frmea(); }
+
+    async function loadHomepageConfig() {
+      try {
+        currentConfig = await getDocument("homepage", "config");
+        if (currentConfig) {
+          // Populate Hero inputs
+          document.getElementById("hero-title-input").value = currentConfig.hero.title || '';
+          document.getElementById("hero-desc-input").value = currentConfig.hero.description || '';
+          document.getElementById("hero-img-input").value = currentConfig.hero.imageUrl || '';
+          document.getElementById("hero-cta-input").value = currentConfig.hero.ctaText || '';
+          
+          renderSectionsEditor();
+        }
+      } catch (err) {
+        console.error("Homepage config load error: ", err);
+      }
+    }
+
+    function renderSectionsEditor() {
+      const container = document.getElementById("sections-editor-container");
+      if (!container || !currentConfig) return;
+
+      container.innerHTML = '';
+      
+      // Sort sections by order
+      const sections = [...currentConfig.sections].sort((a, b) => a.order - b.order);
+
+      sections.forEach((section, idx) => {
+        const item = document.createElement("div");
+        item.className = "field-item";
+        item.style.backgroundColor = "#090d16";
+        item.style.cursor = "default";
+        
+        // Generate nice visual title matching section ID
+        const readableTitle = section.id.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+
+        item.innerHTML = `
+          <div style="display:flex; align-items:center; gap:1.25rem;">
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <button class="order-btn" data-dir="up" data-index="${idx}">▲</button>
+              <button class="order-btn" data-dir="down" data-index="${idx}">▼</button>
+            </div>
+            <div>
+              <h4 style="font-size:1.05rem; color:#fff; font-family:var(--font-heading);">${readableTitle}</h4>
+              <span style="font-size:0.75rem; color:var(--text-muted);">Current Order Rank: ${section.order}</span>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <label style="font-size:0.9rem; color:#cbd5e1; cursor:pointer;" for="toggle-${section.id}">Active Section</label>
+            <input type="checkbox" id="toggle-${section.id}" data-id="${section.id}" ${section.enabled ? 'checked' : ''} style="width:20px; height:20px; cursor:pointer;">
+          </div>
+        `;
+        container.appendChild(item);
+      });
+
+      // Bind Up/Down actions
+      const orderBtns = container.querySelectorAll(".order-btn");
+      orderBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+          const index = parseInt(btn.getAttribute("data-index"));
+          const dir = btn.getAttribute("data-dir");
+          moveSection(index, dir);
+        });
+      });
+    }
+
+    function moveSection(index, direction) {
+      const sections = [...currentConfig.sections].sort((a, b) => a.order - b.order);
+      
+      if (direction === "up" && index > 0) {
+        // Swap with previous
+        const temp = sections[index];
+        sections[index] = sections[index - 1];
+        sections[index - 1] = temp;
+      } else if (direction === "down" && index < sections.length - 1) {
+        // Swap with next
+        const temp = sections[index];
+        sections[index] = sections[index + 1];
+        sections[index + 1] = temp;
+      }
+
+      // Reassign sequential orders
+      sections.forEach((sec, idx) => {
+        sec.order = idx + 1;
+      });
+
+      currentConfig.sections = sections;
+      renderSectionsEditor();
+    }
+
+    // Save Hero Banner Updates
+    const heroForm = document.getElementById("hero-settings-form");
+    if (heroForm) {
+      heroForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = heroForm.querySelector("button");
+        btn.disabled = true;
+        btn.innerText = "Saving Banner...";
+
+        currentConfig.hero = {
+          title: document.getElementById("hero-title-input").value,
+          description: document.getElementById("hero-desc-input").value,
+          imageUrl: document.getElementById("hero-img-input").value,
+          ctaText: document.getElementById("hero-cta-input").value,
+          ctaLink: currentConfig.hero.ctaLink || "/pages/admission.html"
+        };
+
+        try {
+          await setDocument("homepage", "config", currentConfig);
+          alert("Hero banner updated successfully.");
+        } catch (err) {
+          alert("Failed to update Hero settings.");
+        } finally {
+          btn.disabled = false;
+          btn.innerText = "Update Hero Banner";
+        }
+      });
+    }
+
+    // Save sections configuration updates
+    const saveLayoutBtn = document.getElementById("save-sections-layout-btn");
+    if (saveLayoutBtn) {
+      saveLayoutBtn.addEventListener("click", async () => {
+        saveLayoutBtn.disabled = true;
+        saveLayoutBtn.innerText = "Saving Layout Configuration...";
+
+        // Collect Toggle states
+        currentConfig.sections.forEach(sec => {
+          const checkEl = document.getElementById(`toggle-${sec.id}`);
+          if (checkEl) {
+            sec.enabled = checkEl.checked;
+          }
+        });
+
+        try {
+          await setDocument("homepage", "config", currentConfig);
+          alert("Homepage sections order and visibility settings saved successfully.");
+          loadHomepageConfig(); // reload
+        } catch (err) {
+          alert("Failed to save sections layout configuration.");
+        } finally {
+          saveLayoutBtn.disabled = false;
+          saveLayoutBtn.innerText = "Save Section Layout";
+        }
+      });
+    }
+  </script>
+</body>
+</html>

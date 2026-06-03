@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notice Board | MathScienceYJR</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+
+  <!-- Safety Loader Hide Fallback Script -->
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loader = document.getElementById('loader');
+        if (loader && !loader.classList.contains('hidden')) {
+          loader.classList.add('hidden');
+          console.warn('Page loader hidden by safety fallback timeout.');
+        }
+      }, 1500);
+    });
+  </script>
+</head>
+<body>
+
+  <!-- Page Loader -->
+  <div class="page-loader" id="loader">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Global Header -->
+  <div id="global-header"></div>
+
+  <!-- Header Banner -->
+  <section class="section-padding reveal active" style="padding-top: 140px; background: linear-gradient(180deg, rgba(37, 99, 235, 0.05), transparent); text-align: center;">
+    <div class="container">
+      <span class="category-badge" style="margin-bottom: 1rem;">Information Board</span>
+      <h1 style="font-size: 3rem; margin-bottom: 1rem;">Announcements & General Notices</h1>
+      <p class="text-muted" style="max-width: 600px; margin: 0 auto;">Stay updated with scheduling, syllabus expansions, holiday declarations, and scholarship testing timelines.</p>
+    </div>
+  </section>
+
+  <!-- Notice board list container -->
+  <section class="section-padding reveal" style="padding-top: 0;">
+    <div class="container" style="max-width: 850px;">
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;" id="notices-board-list">
+        <!-- Notices Mount Dynamically -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Global Footer -->
+  <div id="global-footer"></div>
+
+  <!-- WhatsApp Bubble -->
+  <div id="global-whatsapp"></div>
+
+  <script type="module" src="../assets/js/main.js"></script>
+  <script type="module">
+    import { getCollection } from '../firebase/firebase-config.js';
+
+    const initDynamicPage_0jny0 = async () => {
+      await loadNotices();
+    };
+if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", initDynamicPage_0jny0); } else { initDynamicPage_0jny0(); }
+
+    async function loadNotices() {
+      const container = document.getElementById("notices-board-list");
+      if (!container) return;
+
+      container.innerHTML = `<div style="text-align:center;">Retrieving active notices...</div>`;
+
+      try {
+        const list = await getCollection("announcements");
+        const today = new Date().toISOString().split('T')[0];
+
+        // Filter valid notices: visible, not expired, scheduled in past/today
+        const active = list.filter(item => {
+          if (!item.visible) return false;
+          if (item.expiryDate && item.expiryDate < today) return false;
+          if (item.scheduledDate && item.scheduledDate > today) return false;
+          return true;
+        });
+
+        // Sort: Pinned first, then newest first
+        const sorted = active.sort((a, b) => {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        });
+
+        if (sorted.length === 0) {
+          container.innerHTML = `
+            <div class="glass-card text-center" style="padding: 4rem 2rem;">
+              <svg width="48" height="48" fill="none" stroke="var(--text-muted)" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 1.5rem auto;"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+              <h3>Board Empty</h3>
+              <p class="text-muted" style="margin-top: 0.5rem;">There are no active notices or scheduled announcements posted on the board.</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = '';
+        sorted.forEach(ann => {
+          const card = document.createElement("div");
+          card.className = "glass-card reveal active";
+          card.style.padding = "2rem";
+          card.style.borderLeft = ann.pinned ? "5px solid var(--accent)" : "1px solid var(--border-color)";
+          
+          const publishDate = new Date(ann.createdAt).toLocaleDateString('en-IN', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+          });
+
+          card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+              <h3 style="font-size: 1.35rem; color: var(--text-dark);">${ann.title}</h3>
+              <span style="font-size: 0.85rem; color: var(--text-muted); font-weight:500;">📅 Published: ${publishDate}</span>
+            </div>
+            <p class="text-muted" style="font-size: 1.05rem; line-height: 1.6; margin-bottom: 1.25rem;">${ann.content}</p>
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+              ${ann.pinned ? `<span class="category-badge" style="background-color: rgba(245, 158, 11, 0.15); color: var(--accent-hover);">📌 Pinned Notice</span>` : '<span></span>'}
+              ${ann.expiryDate ? `<span style="font-size:0.75rem; color: var(--text-muted); font-weight:500;">⌛ Active until: ${new Date(ann.expiryDate).toLocaleDateString('en-IN')}</span>` : ''}
+            </div>
+          `;
+          container.appendChild(card);
+        });
+
+      } catch (err) {
+        console.error("Notice Board load error: ", err);
+        container.innerHTML = `<p class="text-muted text-center">Failed to load notices. Please refresh.</p>`;
+      }
+    }
+  </script>
+</body>
+</html>

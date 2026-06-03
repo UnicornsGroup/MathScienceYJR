@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review Management | MathScienceYJR CMS</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/admin.css">
+
+  <!-- Safety Loader Hide Fallback Script -->
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loader = document.getElementById('loader');
+        if (loader && !loader.classList.contains('hidden')) {
+          loader.classList.add('hidden');
+          console.warn('Page loader hidden by safety fallback timeout.');
+        }
+      }, 1500);
+    });
+  </script>
+</head>
+<body>
+
+  <div class="admin-wrapper">
+    <!-- Sidebar -->
+    <div id="admin-sidebar-container"></div>
+
+    <main class="admin-main">
+      <!-- Admin Header -->
+      <div id="admin-header-container"></div>
+
+      <div class="admin-content">
+        <!-- Control actions row -->
+        <div class="table-actions">
+          <div class="search-bar">
+            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <input type="text" id="review-search" placeholder="Search reviews by name or role...">
+          </div>
+          <button class="btn btn-primary" id="open-add-review-modal">➕ Add Student Review</button>
+        </div>
+
+        <!-- Reviews Table -->
+        <div class="content-box">
+          <div class="table-responsive">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Avatar</th>
+                  <th>Reviewer Name</th>
+                  <th>Role / Designation</th>
+                  <th>Review Snippet</th>
+                  <th>Video URL</th>
+                  <th>Featured</th>
+                  <th>Visibility</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="reviews-admin-tbody">
+                <tr>
+                  <td colspan="8" style="text-align:center; color:var(--text-muted);">Fetching client reviews...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Review Modal -->
+  <div class="modal-overlay" id="review-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 id="review-modal-title">Add Review Testimonial</h3>
+        <button class="modal-close" id="close-review-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="review-editor-form">
+          <input type="hidden" id="review-edit-id">
+
+          <div class="form-group">
+            <label for="rev-name-field" class="form-label">Reviewer Name</label>
+            <input type="text" id="rev-name-field" class="form-control" placeholder="Dr. Sandeep Verma" required>
+          </div>
+
+          <div class="form-group" style="margin-top:1rem;">
+            <label for="rev-role-field" class="form-label">Role / Designation (e.g. Parent of AIR 12, Student)</label>
+            <input type="text" id="rev-role-field" class="form-control" placeholder="Parent of AIR 12" required>
+          </div>
+
+          <div class="form-group" style="margin-top:1rem;">
+            <label for="rev-text-field" class="form-label">Review / Feedback Text</label>
+            <textarea id="rev-text-field" class="form-control" placeholder="Provide textual statement..." required></textarea>
+          </div>
+
+          <div class="grid-2" style="margin-top:1rem;">
+            <div class="form-group">
+              <label for="rev-photo-field" class="form-label">Reviewer Photo URL</label>
+              <input type="text" id="rev-photo-field" class="form-control" placeholder="https://...">
+            </div>
+            <div class="form-group">
+              <label for="rev-video-field" class="form-label">Video Review Link (YouTube URL, optional)</label>
+              <input type="text" id="rev-video-field" class="form-control" placeholder="https://www.youtube.com/watch?v=...">
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-top:1.5rem;">
+            <div class="form-group" style="display:flex; align-items:center; gap:0.5rem;">
+              <input type="checkbox" id="rev-featured-field" style="width:20px; height:20px; cursor:pointer;">
+              <label for="rev-featured-field" style="color:#cbd5e1; cursor:pointer;">Feature on Home Page</label>
+            </div>
+            <div class="form-group" style="display:flex; align-items:center; gap:0.5rem;">
+              <input type="checkbox" id="rev-visible-field" style="width:20px; height:20px; cursor:pointer;" checked>
+              <label for="rev-visible-field" style="color:#cbd5e1; cursor:pointer;">Show to public</label>
+            </div>
+          </div>
+
+          <div style="margin-top:2.5rem; display:flex; justify-content:flex-end; gap:1rem;">
+            <button type="button" class="btn btn-outline" id="cancel-review-modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Testimonial</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../admin/js/admin-core.js"></script>
+  <script type="module">
+    import { getCollection, addDocument, updateDocument, deleteDocument } from '../firebase/firebase-config.js';
+
+    let reviewsList = [];
+
+    if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", loadReviewsManager); } else { loadReviewsManager(); }
+
+    async function loadReviewsManager() {
+      const tbody = document.getElementById("reviews-admin-tbody");
+      if (!tbody) return;
+
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;">Fetching student reviews...</td></tr>`;
+
+      try {
+        reviewsList = await getCollection("testimonials");
+        renderAdminReviews(reviewsList);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#ef4444;">Failed to read testimonials DB.</td></tr>`;
+      }
+    }
+
+    function renderAdminReviews(list) {
+      const tbody = document.getElementById("reviews-admin-tbody");
+      if (!tbody) return;
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">No testimonials listed.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = '';
+      list.forEach(rev => {
+        const snippet = rev.review.length > 60 ? rev.review.substring(0, 60) + '...' : rev.review;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><img src="${rev.photoUrl || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=150'}" style="width:40px; height:40px; object-fit:cover; border-radius:50%; border:1px solid #1e293b;"></td>
+          <td><strong>${rev.authorName}</strong></td>
+          <td>${rev.role}</td>
+          <td><span style="font-size:0.85rem; color:#cbd5e1;">"${snippet}"</span></td>
+          <td>${rev.videoUrl ? `<a href="${rev.videoUrl}" target="_blank" style="color:var(--secondary)">🔗 View Video</a>` : '<span style="color:#64748b;">No video</span>'}</td>
+          <td>
+            <button class="action-btn toggle-featured-rev" data-id="${rev.id}" data-feat="${rev.featured}">
+              ${rev.featured ? '⭐ Featured' : '☆ Standard'}
+            </button>
+          </td>
+          <td>
+            <button class="action-btn toggle-visible-rev" data-id="${rev.id}" data-visible="${rev.visible}">
+              ${rev.visible ? '👁️ Live' : '👁️‍cn Hidden'}
+            </button>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <button class="action-btn edit-review-btn" data-id="${rev.id}">✏️ Edit</button>
+              <button class="action-btn delete-review-btn" data-id="${rev.id}">🗑️ Delete</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      bindTableActions();
+    }
+
+    function bindTableActions() {
+      // Toggle Featured
+      document.querySelectorAll(".toggle-featured-rev").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          const feat = btn.getAttribute("data-feat") === "true";
+          btn.disabled = true;
+          await updateDocument("testimonials", id, { featured: !feat });
+          await loadReviewsManager();
+        });
+      });
+
+      // Toggle Visibility
+      document.querySelectorAll(".toggle-visible-rev").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          const vis = btn.getAttribute("data-visible") === "true";
+          btn.disabled = true;
+          await updateDocument("testimonials", id, { visible: !vis });
+          await loadReviewsManager();
+        });
+      });
+
+      // Edit Click
+      document.querySelectorAll(".edit-review-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-id");
+          const rev = reviewsList.find(r => r.id === id);
+          if (rev) openModal(rev);
+        });
+      });
+
+      // Delete Click
+      document.querySelectorAll(".delete-review-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          if (confirm("Permanently delete testimonial review?")) {
+            await deleteDocument("testimonials", id);
+            await loadReviewsManager();
+          }
+        });
+      });
+    }
+
+    // Modal Control
+    const modal = document.getElementById("review-modal");
+    const openAddBtn = document.getElementById("open-add-review-modal");
+    const closeBtn = document.getElementById("close-review-modal");
+    const cancelBtn = document.getElementById("cancel-review-modal");
+    const editorForm = document.getElementById("review-editor-form");
+
+    openAddBtn.addEventListener("click", () => openModal(null));
+    closeBtn.addEventListener("click", closeModal);
+    cancelBtn.addEventListener("click", closeModal);
+
+    function openModal(rev = null) {
+      editorForm.reset();
+      
+      if (rev) {
+        document.getElementById("review-modal-title").innerText = "Edit Testimonial Details";
+        document.getElementById("review-edit-id").value = rev.id;
+        document.getElementById("rev-name-field").value = rev.authorName;
+        document.getElementById("rev-role-field").value = rev.role;
+        document.getElementById("rev-text-field").value = rev.review;
+        document.getElementById("rev-photo-field").value = rev.photoUrl || '';
+        document.getElementById("rev-video-field").value = rev.videoUrl || '';
+        document.getElementById("rev-featured-field").checked = rev.featured;
+        document.getElementById("rev-visible-field").checked = rev.visible;
+      } else {
+        document.getElementById("review-modal-title").innerText = "Add Review Testimonial";
+        document.getElementById("review-edit-id").value = '';
+        document.getElementById("rev-featured-field").checked = false;
+        document.getElementById("rev-visible-field").checked = true;
+      }
+      modal.classList.add("active");
+    }
+
+    function closeModal() {
+      modal.classList.remove("active");
+    }
+
+    editorForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const saveBtn = editorForm.querySelector("button[type='submit']");
+      saveBtn.disabled = true;
+      saveBtn.innerText = "Saving Review...";
+
+      const id = document.getElementById("review-edit-id").value;
+
+      const payload = {
+        authorName: document.getElementById("rev-name-field").value,
+        role: document.getElementById("rev-role-field").value,
+        review: document.getElementById("rev-text-field").value,
+        photoUrl: document.getElementById("rev-photo-field").value,
+        videoUrl: document.getElementById("rev-video-field").value,
+        featured: document.getElementById("rev-featured-field").checked,
+        visible: document.getElementById("rev-visible-field").checked
+      };
+
+      try {
+        if (id) {
+          await updateDocument("testimonials", id, payload);
+        } else {
+          await addDocument("testimonials", payload);
+        }
+        closeModal();
+        await loadReviewsManager();
+      } catch (err) {
+        alert("Failed to save review.");
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerText = "Save Testimonial";
+      }
+    });
+
+    // Search filter
+    document.getElementById("review-search").addEventListener("input", (e) => {
+      const q = e.target.value.toLowerCase();
+      const filtered = reviewsList.filter(r => 
+        r.authorName.toLowerCase().includes(q) || 
+        r.role.toLowerCase().includes(q)
+      );
+      renderAdminReviews(filtered);
+    });
+  </script>
+</body>
+</html>

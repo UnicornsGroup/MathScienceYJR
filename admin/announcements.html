@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notice Board Management | MathScienceYJR CMS</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/admin.css">
+
+  <!-- Safety Loader Hide Fallback Script -->
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loader = document.getElementById('loader');
+        if (loader && !loader.classList.contains('hidden')) {
+          loader.classList.add('hidden');
+          console.warn('Page loader hidden by safety fallback timeout.');
+        }
+      }, 1500);
+    });
+  </script>
+</head>
+<body>
+
+  <div class="admin-wrapper">
+    <!-- Sidebar -->
+    <div id="admin-sidebar-container"></div>
+
+    <main class="admin-main">
+      <!-- Admin Header -->
+      <div id="admin-header-container"></div>
+
+      <div class="admin-content">
+        <!-- Control actions row -->
+        <div class="table-actions">
+          <div class="search-bar">
+            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <input type="text" id="notice-search" placeholder="Search notices by title or content...">
+          </div>
+          <button class="btn btn-primary" id="open-add-notice-modal">➕ Write New Notice</button>
+        </div>
+
+        <!-- Notices list box -->
+        <div class="content-box">
+          <div class="table-responsive">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Notice Snippet</th>
+                  <th>Scheduled Date</th>
+                  <th>Expiration Date</th>
+                  <th>Pinned</th>
+                  <th>Visibility</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="notices-admin-tbody">
+                <tr>
+                  <td colspan="7" style="text-align:center; color:var(--text-muted);">Fetching notice list...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Notice Editor Modal -->
+  <div class="modal-overlay" id="notice-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 id="notice-modal-title">Write New Notice</h3>
+        <button class="modal-close" id="close-notice-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="notice-editor-form">
+          <input type="hidden" id="notice-edit-id">
+
+          <div class="form-group">
+            <label for="not-title-field" class="form-label">Notice Title</label>
+            <input type="text" id="not-title-field" class="form-control" placeholder="New Olympiad batch commencing" required>
+          </div>
+
+          <div class="form-group" style="margin-top:1rem;">
+            <label for="not-content-field" class="form-label">Notice Details / Content Body</label>
+            <textarea id="not-content-field" class="form-control" placeholder="Write full notice details here..." required></textarea>
+          </div>
+
+          <div class="grid-2" style="margin-top:1rem;">
+            <div class="form-group">
+              <label for="not-sched-field" class="form-label">Scheduled Publish Date</label>
+              <input type="date" id="not-sched-field" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="not-expire-field" class="form-label">Expiration Date (optional)</label>
+              <input type="date" id="not-expire-field" class="form-control">
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-top:1.5rem;">
+            <div class="form-group" style="display:flex; align-items:center; gap:0.5rem;">
+              <input type="checkbox" id="not-pinned-field" style="width:20px; height:20px; cursor:pointer;">
+              <label for="not-pinned-field" style="color:#cbd5e1; cursor:pointer;">Pin notice to top</label>
+            </div>
+            <div class="form-group" style="display:flex; align-items:center; gap:0.5rem;">
+              <input type="checkbox" id="not-visible-field" style="width:20px; height:20px; cursor:pointer;" checked>
+              <label for="not-visible-field" style="color:#cbd5e1; cursor:pointer;">Show to public</label>
+            </div>
+          </div>
+
+          <div style="margin-top:2.5rem; display:flex; justify-content:flex-end; gap:1rem;">
+            <button type="button" class="btn btn-outline" id="cancel-notice-modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Notice</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../admin/js/admin-core.js"></script>
+  <script type="module">
+    import { getCollection, addDocument, updateDocument, deleteDocument } from '../firebase/firebase-config.js';
+
+    let noticesList = [];
+
+    if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", loadNoticesManager); } else { loadNoticesManager(); }
+
+    async function loadNoticesManager() {
+      const tbody = document.getElementById("notices-admin-tbody");
+      if (!tbody) return;
+
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Fetching notice board data...</td></tr>`;
+
+      try {
+        noticesList = await getCollection("announcements");
+        renderAdminNotices(noticesList);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#ef4444;">Failed to read notices DB.</td></tr>`;
+      }
+    }
+
+    function renderAdminNotices(list) {
+      const tbody = document.getElementById("notices-admin-tbody");
+      if (!tbody) return;
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">No notices created.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = '';
+      
+      // Sort pinned first, then date
+      const sorted = [...list].sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+
+      sorted.forEach(not => {
+        const snippet = not.content.length > 50 ? not.content.substring(0, 50) + '...' : not.content;
+        const sched = not.scheduledDate ? new Date(not.scheduledDate).toLocaleDateString('en-IN') : 'Immediate';
+        const exp = not.expiryDate ? new Date(not.expiryDate).toLocaleDateString('en-IN') : 'Never';
+        const tr = document.createElement("tr");
+        
+        tr.innerHTML = `
+          <td><strong>${not.title}</strong></td>
+          <td><span style="font-size:0.85rem; color:#cbd5e1;">${snippet}</span></td>
+          <td>${sched}</td>
+          <td>${exp}</td>
+          <td>
+            <button class="action-btn toggle-pin-not" data-id="${not.id}" data-pinned="${not.pinned}">
+              ${not.pinned ? '📌 Pinned' : '☆ Pin'}
+            </button>
+          </td>
+          <td>
+            <button class="action-btn toggle-visible-not" data-id="${not.id}" data-visible="${not.visible}">
+              ${not.visible ? '👁️ Live' : '👁️‍🗨️ Hidden'}
+            </button>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <button class="action-btn edit-notice-btn" data-id="${not.id}">✏️ Edit</button>
+              <button class="action-btn delete-notice-btn" data-id="${not.id}">🗑️ Delete</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      bindTableActions();
+    }
+
+    function bindTableActions() {
+      // Toggle Pin
+      document.querySelectorAll(".toggle-pin-not").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          const pin = btn.getAttribute("data-pinned") === "true";
+          btn.disabled = true;
+          await updateDocument("announcements", id, { pinned: !pin });
+          await loadNoticesManager();
+        });
+      });
+
+      // Toggle Visibility
+      document.querySelectorAll(".toggle-visible-not").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          const vis = btn.getAttribute("data-visible") === "true";
+          btn.disabled = true;
+          await updateDocument("announcements", id, { visible: !vis });
+          await loadNoticesManager();
+        });
+      });
+
+      // Edit Click
+      document.querySelectorAll(".edit-notice-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-id");
+          const not = noticesList.find(n => n.id === id);
+          if (not) openModal(not);
+        });
+      });
+
+      // Delete Click
+      document.querySelectorAll(".delete-notice-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          if (confirm("Permanently delete announcement?")) {
+            await deleteDocument("announcements", id);
+            await loadNoticesManager();
+          }
+        });
+      });
+    }
+
+    // Modal Control
+    const modal = document.getElementById("notice-modal");
+    const openAddBtn = document.getElementById("open-add-notice-modal");
+    const closeBtn = document.getElementById("close-notice-modal");
+    const cancelBtn = document.getElementById("cancel-notice-modal");
+    const editorForm = document.getElementById("notice-editor-form");
+
+    openAddBtn.addEventListener("click", () => openModal(null));
+    closeBtn.addEventListener("click", closeModal);
+    cancelBtn.addEventListener("click", closeModal);
+
+    function openModal(not = null) {
+      editorForm.reset();
+      
+      const todayString = new Date().toISOString().split('T')[0];
+
+      if (not) {
+        document.getElementById("notice-modal-title").innerText = "Edit Notice";
+        document.getElementById("notice-edit-id").value = not.id;
+        document.getElementById("not-title-field").value = not.title;
+        document.getElementById("not-content-field").value = not.content;
+        document.getElementById("not-sched-field").value = not.scheduledDate || todayString;
+        document.getElementById("not-expire-field").value = not.expiryDate || '';
+        document.getElementById("not-pinned-field").checked = not.pinned;
+        document.getElementById("not-visible-field").checked = not.visible;
+      } else {
+        document.getElementById("notice-modal-title").innerText = "Write New Notice";
+        document.getElementById("notice-edit-id").value = '';
+        document.getElementById("not-sched-field").value = todayString;
+        document.getElementById("not-pinned-field").checked = false;
+        document.getElementById("not-visible-field").checked = true;
+      }
+      modal.classList.add("active");
+    }
+
+    function closeModal() {
+      modal.classList.remove("active");
+    }
+
+    editorForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const saveBtn = editorForm.querySelector("button[type='submit']");
+      saveBtn.disabled = true;
+      saveBtn.innerText = "Saving Notice...";
+
+      const id = document.getElementById("notice-edit-id").value;
+
+      const payload = {
+        title: document.getElementById("not-title-field").value,
+        content: document.getElementById("not-content-field").value,
+        scheduledDate: document.getElementById("not-sched-field").value,
+        expiryDate: document.getElementById("not-expire-field").value || null,
+        pinned: document.getElementById("not-pinned-field").checked,
+        visible: document.getElementById("not-visible-field").checked
+      };
+
+      try {
+        if (id) {
+          await updateDocument("announcements", id, payload);
+        } else {
+          await addDocument("announcements", payload);
+        }
+        closeModal();
+        await loadNoticesManager();
+      } catch (err) {
+        alert("Failed to save notice.");
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerText = "Save Notice";
+      }
+    });
+
+    // Search filter
+    document.getElementById("notice-search").addEventListener("input", (e) => {
+      const q = e.target.value.toLowerCase();
+      const filtered = noticesList.filter(n => 
+        n.title.toLowerCase().includes(q) || 
+        n.content.toLowerCase().includes(q)
+      );
+      renderAdminNotices(filtered);
+    });
+  </script>
+</body>
+</html>

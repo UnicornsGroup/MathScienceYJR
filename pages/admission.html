@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrations | MathScienceYJR</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+
+  <!-- Safety Loader Hide Fallback Script -->
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loader = document.getElementById('loader');
+        if (loader && !loader.classList.contains('hidden')) {
+          loader.classList.add('hidden');
+          console.warn('Page loader hidden by safety fallback timeout.');
+        }
+      }, 1500);
+    });
+  </script>
+</head>
+<body>
+
+  <!-- Page Loader -->
+  <div class="page-loader" id="loader">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Global Header -->
+  <div id="global-header"></div>
+
+  <!-- Header Banner -->
+  <section class="section-padding reveal active" style="padding-top: 140px; background: linear-gradient(180deg, rgba(37, 99, 235, 0.05), transparent); text-align: center;">
+    <div class="container">
+      <span class="category-badge" style="margin-bottom: 1rem;">Student Admissions</span>
+      <h1 style="font-size: 3rem; margin-bottom: 1rem;">Apply for Registration</h1>
+      <p class="text-muted" style="max-width: 600px; margin: 0 auto;">Select your application pathway below to load the appropriate registration sheet.</p>
+    </div>
+  </section>
+
+  <!-- Form Engine Workspace -->
+  <section class="section-padding reveal" style="padding-top: 0;">
+    <div class="container" style="max-width: 650px;">
+      <!-- Form Toggle Buttons -->
+      <div style="display: flex; gap: 0.75rem; justify-content: center; margin-bottom: 3.5rem; flex-wrap: wrap;" id="form-selectors">
+        <button class="btn btn-primary" data-form="admission">Admission Form</button>
+        <button class="btn btn-outline" data-form="demoClass">Demo Class Form</button>
+        <button class="btn btn-outline" data-form="scholarship">Scholarship Form</button>
+      </div>
+
+      <!-- The Form Container -->
+      <div class="glass-card" style="padding: 2.5rem;" id="admission-form-container">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Global Footer -->
+  <div id="global-footer"></div>
+
+  <!-- WhatsApp Bubble -->
+  <div id="global-whatsapp"></div>
+
+  <script type="module" src="../assets/js/main.js"></script>
+  <script type="module">
+    import { renderForm } from '../assets/js/modules/form-renderer.js';
+
+    if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", initAdmissionPage); } else { initAdmissionPage(); }
+
+    function initAdmissionPage() {
+      // Check for form type in query params, default to "admission"
+      const urlParams = new URLSearchParams(window.location.search);
+      let formType = urlParams.get("type") || "admission";
+      const preselectCourse = urlParams.get("course");
+
+      // Set active button
+      setActiveButton(formType);
+
+      // Load form
+      loadFormType(formType, preselectCourse);
+
+      // Bind selectors
+      const buttons = document.querySelectorAll("#form-selectors button");
+      buttons.forEach(btn => {
+        btn.addEventListener("click", () => {
+          const targetForm = btn.getAttribute("data-form");
+          
+          // Update URL params without reloading page
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set("type", targetForm);
+          newUrl.searchParams.delete("course"); // Clear course pre-select on click
+          window.history.pushState({}, '', newUrl);
+
+          setActiveButton(targetForm);
+          loadFormType(targetForm, null);
+        });
+      });
+    }
+
+    function setActiveButton(formType) {
+      const buttons = document.querySelectorAll("#form-selectors button");
+      buttons.forEach(btn => {
+        if (btn.getAttribute("data-form") === formType) {
+          btn.classList.add("btn-primary");
+          btn.classList.remove("btn-outline");
+        } else {
+          btn.classList.add("btn-outline");
+          btn.classList.remove("btn-primary");
+        }
+      });
+    }
+
+    async function loadFormType(formType, preselectCourse) {
+      await renderForm(formType, "admission-form-container", () => {
+        console.log(`Form ${formType} submitted successfully.`);
+      });
+
+      // Handle course preselection if it exists
+      if (preselectCourse) {
+        // Look for course select field
+        const selectField = document.querySelector("select[name='courseChoice']") || document.querySelector("select[name='preferredCourse']");
+        if (selectField) {
+          selectField.value = decodeURIComponent(preselectCourse);
+        }
+      }
+    }
+  </script>
+</body>
+</html>

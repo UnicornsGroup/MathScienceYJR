@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Reviews | MathScienceYJR</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+
+  <!-- Safety Loader Hide Fallback Script -->
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loader = document.getElementById('loader');
+        if (loader && !loader.classList.contains('hidden')) {
+          loader.classList.add('hidden');
+          console.warn('Page loader hidden by safety fallback timeout.');
+        }
+      }, 1500);
+    });
+  </script>
+</head>
+<body>
+
+  <!-- Page Loader -->
+  <div class="page-loader" id="loader">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Global Header -->
+  <div id="global-header"></div>
+
+  <!-- Header Banner -->
+  <section class="section-padding reveal active" style="padding-top: 140px; background: linear-gradient(180deg, rgba(37, 99, 235, 0.05), transparent); text-align: center;">
+    <div class="container">
+      <span class="category-badge" style="margin-bottom: 1rem;">Testimonials</span>
+      <h1 style="font-size: 3rem; margin-bottom: 1rem;">Voices of our Scholars & Parents</h1>
+      <p class="text-muted" style="max-width: 600px; margin: 0 auto;">Read how our conceptual tutoring environment has guided students to break through mental limits and excel in hard exams.</p>
+    </div>
+  </section>
+
+  <!-- Reviews Content Section -->
+  <section class="section-padding reveal" style="padding-top: 0;">
+    <div class="container">
+      <div class="grid-2" id="testimonials-listing-grid">
+        <!-- Testimonials list mounts here -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Global Footer -->
+  <div id="global-footer"></div>
+
+  <!-- WhatsApp Bubble -->
+  <div id="global-whatsapp"></div>
+
+  <script type="module" src="../assets/js/main.js"></script>
+  <script type="module">
+    import { getCollection } from '../firebase/firebase-config.js';
+
+    const initDynamicPage_diawt = async () => {
+      await loadTestimonialsPage();
+    };
+if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", initDynamicPage_diawt); } else { initDynamicPage_diawt(); }
+
+    async function loadTestimonialsPage() {
+      const grid = document.getElementById("testimonials-listing-grid");
+      if (!grid) return;
+
+      grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center;">Loading success reviews...</div>`;
+
+      try {
+        const reviews = await getCollection("testimonials");
+        const visibleReviews = reviews.filter(r => r.visible);
+
+        if (visibleReviews.length === 0) {
+          grid.innerHTML = `<p class="text-muted text-center" style="grid-column: 1/-1;">No reviews posted yet.</p>`;
+          return;
+        }
+
+        grid.innerHTML = '';
+        visibleReviews.forEach(rev => {
+          const card = document.createElement("div");
+          card.className = "glass-card reveal active";
+          card.style.padding = "2.5rem";
+          
+          let mediaSection = '';
+          if (rev.videoUrl) {
+            // Embed YouTube video if link exists
+            let videoEmbedUrl = rev.videoUrl;
+            if (videoEmbedUrl.includes("watch?v=")) {
+              videoEmbedUrl = videoEmbedUrl.replace("watch?v=", "embed/");
+            }
+            mediaSection = `
+              <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: var(--border-radius-sm); margin-bottom: 1.5rem; border: 1px solid var(--border-color);">
+                <iframe src="${videoEmbedUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+              </div>
+            `;
+          }
+
+          card.innerHTML = `
+            ${mediaSection}
+            <div style="font-size: 2.5rem; color: var(--secondary); margin-bottom: 0.5rem; line-height: 1;">“</div>
+            <p class="text-muted" style="font-style: italic; font-size: 1.05rem; margin-bottom: 2rem; line-height: 1.6;">${rev.review}</p>
+            <div style="display: flex; align-items: center; gap: 1rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+              <img src="${rev.photoUrl || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=150'}" alt="${rev.authorName}" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid var(--secondary);">
+              <div>
+                <h4 style="font-size: 1.1rem; font-weight:700;">${rev.authorName}</h4>
+                <span style="font-size: 0.85rem; color: var(--text-muted); font-weight:500;">${rev.role}</span>
+              </div>
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+      } catch (err) {
+        console.error("Testimonials load error: ", err);
+        grid.innerHTML = `<p class="text-muted text-center" style="grid-column: 1/-1;">Error rendering topper reviews.</p>`;
+      }
+    }
+  </script>
+</body>
+</html>
