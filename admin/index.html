@@ -113,9 +113,13 @@
   <script type="module">
     import { getCollection, listenCollection } from '../firebase/firebase-config.js';
 
-    document.addEventListener("DOMContentLoaded", () => {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => {
+        initDashboardStats();
+      });
+    } else {
       initDashboardStats();
-    });
+    }
 
     async function initDashboardStats() {
       try {
