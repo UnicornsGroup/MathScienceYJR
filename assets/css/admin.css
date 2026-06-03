@@ -594,3 +594,19 @@ select.form-control option {
   color: #fff !important;
   border-color: #cbd5e1 !important;
 }
+
+/* Offline warning banner */
+.offline-warning-banner {
+  background-color: #7f1d1d;
+  border-bottom: 1px solid #b91c1c;
+  color: #fca5a5;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.9rem;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}

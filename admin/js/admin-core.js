@@ -1,5 +1,5 @@
 /* math-science-yjr/admin/js/admin-core.js */
-import { checkAdminSession, adminLogout } from '../../firebase/firebase-config.js';
+import { checkAdminSession, adminLogout, configMode } from '../../firebase/firebase-config.js';
 
 if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", initAdminCore); } else { initAdminCore(); }
 
@@ -27,6 +27,10 @@ function initAdminCore() {
 }
 
 function setupAdminLayout(user) {
+  if (configMode === "offline") {
+    injectOfflineWarning();
+  }
+
   // Inject Sidebar if container exists
   const sidebarContainer = document.getElementById("admin-sidebar-container");
   if (sidebarContainer) {
@@ -145,4 +149,13 @@ function getPageName() {
   if (path.includes("forms.html")) return "Dynamic Form Builder & Lead Center";
   if (path.includes("media.html")) return "Central Media Library";
   return "System Dashboard Overview";
+}
+
+function injectOfflineWarning() {
+  const warning = document.createElement("div");
+  warning.className = "offline-warning-banner";
+  warning.innerHTML = `
+    <span>⚠️ <strong>Running in Offline Mock Mode</strong> - Changes are saved to your browser's local storage only and will not sync to Firebase. Verify your Firebase configuration and internet connection.</span>
+  `;
+  document.body.prepend(warning);
 }
