@@ -12,7 +12,10 @@ const firebaseConfig = {
 };
 
 // Check if credentials are placeholders
-const isMockMode = !firebaseConfig.apiKey || firebaseConfig.apiKey.includes("AIzaSyBOt4BNvjvdF9lxow6KyhzUKymPz6A1GgA");
+const isMockMode = !firebaseConfig.apiKey || 
+                   firebaseConfig.apiKey.trim() === "" || 
+                   firebaseConfig.apiKey.includes("YOUR_API_KEY") || 
+                   firebaseConfig.apiKey === "AIzaSyBOt4BNvjvdF9lxow6KyhzUKymPz6A1GgA";
 
 // MOCK SYSTEM INITIALIZATION
 const initMockDB = () => {
@@ -347,9 +350,6 @@ if (!isMockMode) {
     firestoreDb = getFirestore(firebaseApp);
     firebaseAuth = getAuth(firebaseApp);
     console.log("Firebase initialized successfully in online mode.");
-
-    // Automatically verify if database is fresh and seed it if so
-    setTimeout(checkAndSeedFirestore, 1000);
   } catch (err) {
     console.warn("Failed to load Firebase modules online, switching to Local DB mock mode.", err);
   }
@@ -362,86 +362,93 @@ export const auth = firebaseAuth;
 export const storage = firebaseStorage;
 export const configMode = isMockMode ? "offline" : "online";
 
-// Memory cache to hold the public bundle during single page loads
+// LocalStorage Cache configuration for minimizing Firestore reads
+const CACHE_KEY = "yjr_public_data_cache";
+const CACHE_TIME_KEY = "yjr_public_data_cache_time";
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes TTL
+
+// Memory cache and active fetch promise reference
 let cachedPublicData = null;
+let pendingFetchPromise = null;
+
+// Check if we are on an admin page to bypass cache
+const isAdminPage = window.location.pathname.includes("/admin/");
+
+// Detect explicit page reload to force fresh fetch
+const navigationEntry = window.performance && window.performance.getEntriesByType && window.performance.getEntriesByType("navigation")[0];
+const isPageReload = navigationEntry && navigationEntry.type === "reload";
 
 // Helper to fetch/initialize the all-in-one public data document
-async function getPublicDataBundle() {
+async function getPublicDataBundle(forceFresh = false) {
   if (isMockMode) return null;
-  if (cachedPublicData) return cachedPublicData;
 
-  const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js");
-  const docRef = doc(firestoreDb, "settings", "public_data");
-  const snap = await getDoc(docRef);
-  
-  if (snap.exists()) {
-    cachedPublicData = snap.data();
-    return cachedPublicData;
-  } else {
-    // Return empty default schema if database has not seeded yet
-    const defaultBundle = {
-      settings: {
-        instituteName: "MathScienceYJR",
-        logoUrl: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?auto=format&fit=crop&q=80&w=200",
-        contactNumber: "+91 98765 43210",
-        whatsAppNumber: "919876543210",
-        email: "admissions@mathscienceyjr.com",
-        address: "YJR Towers, 4th Floor, Sector 62, Noida, UP, India",
-        socialMedia: { facebook: "https://facebook.com", instagram: "https://instagram.com", youtube: "https://youtube.com" },
-        googleMapLink: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3502.562013898167!2d77.37687831508249!3d28.612911982425514!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390ce5a5ece55555%3A0xe543e33c6af4c37f!2sMathScienceYJR!5e0!3m2!1sen!2sin!4v1622718228392!5m2!1sen!2sin"
-      },
-      homepage: {
-        hero: {
-          title: "Unlock Conceptual Excellence in STEM",
-          description: "MathScienceYJR is India's leading academy for elite math, physics, and chemistry coaching. Master advanced boards, Olympiads, JEE, and NEET with our expert pedagogy.",
-          imageUrl: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=1200",
-          ctaText: "Apply Online Now",
-          ctaLink: "/pages/admission.html"
-        },
-        sections: [
-          { id: "statistics", enabled: true, order: 1 },
-          { id: "whyChooseUs", enabled: true, order: 2 },
-          { id: "courses", enabled: true, order: 3 },
-          { id: "results", enabled: true, order: 4 },
-          { id: "testimonials", enabled: true, order: 5 },
-          { id: "gallery", enabled: true, order: 6 },
-          { id: "announcements", enabled: true, order: 7 }
-        ]
-      },
-      forms: {
-        inquiry: {
-          formTitle: "Quick General Inquiry",
-          enabled: true,
-          fields: [
-            { id: "fullName", type: "text", label: "Full Name", required: true, order: 1 },
-            { id: "emailAddress", type: "email", label: "Email Address", required: true, order: 2 },
-            { id: "phoneNumber", type: "tel", label: "Contact Phone", required: true, order: 3 },
-            { id: "queryDescription", type: "textarea", label: "Message / Query", required: false, order: 4 }
-          ]
-        },
-        admission: {
-          formTitle: "Dynamic Online Admission Form",
-          enabled: true,
-          fields: [
-            { id: "fullName", type: "text", label: "Student Full Name", required: true, order: 1 },
-            { id: "parentName", type: "text", label: "Parent / Guardian Name", required: true, order: 2 },
-            { id: "parentContact", type: "tel", label: "Parent Mobile Number", required: true, order: 3 },
-            { id: "courseChoice", type: "select", label: "Select Course Path", options: ["Olympiad Foundation & Advanced Math", "JEE & NEET Intensive Physics", "Olympiad Chemistry Elite"], required: true, order: 4 },
-            { id: "dateOfBirth", type: "date", label: "Date of Birth", required: true, order: 5 },
-            { id: "previousScore", type: "text", label: "Previous Class / Exam Score (%)", required: false, order: 6 }
-          ]
-        }
-      },
-      courses: [],
-      results: [],
-      gallery: [],
-      testimonials: [],
-      announcements: [],
-      media: []
-    };
-    cachedPublicData = defaultBundle;
+  const shouldForceFresh = forceFresh || isPageReload || isAdminPage;
+
+  // 1. Return memory cache if present and not forcing fresh
+  if (cachedPublicData && !shouldForceFresh) {
     return cachedPublicData;
   }
+
+  // 2. Return localStorage cache if present and not forcing fresh
+  if (!shouldForceFresh) {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
+      if (cached && cachedTime) {
+        const age = Date.now() - parseInt(cachedTime, 10);
+        if (age < CACHE_TTL_MS) {
+          cachedPublicData = JSON.parse(cached);
+          console.log("Serving public data bundle from localStorage cache.");
+          return cachedPublicData;
+        }
+      }
+    } catch (e) {
+      console.warn("Error reading from localStorage cache:", e);
+    }
+  }
+
+  // 3. If there is already a fetch in progress, wait for it
+  if (pendingFetchPromise && !shouldForceFresh) {
+    return pendingFetchPromise;
+  }
+
+  // 4. Start a new fetch
+  pendingFetchPromise = (async () => {
+    try {
+      console.log("Fetching fresh public data bundle from Firestore...");
+      const { doc, getDoc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js");
+      const docRef = doc(firestoreDb, "settings", "public_data");
+      const snap = await getDoc(docRef);
+      
+      if (snap.exists()) {
+        cachedPublicData = snap.data();
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify(cachedPublicData));
+          localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+        } catch (e) {
+          console.warn("Error writing to localStorage cache:", e);
+        }
+        return cachedPublicData;
+      } else {
+        // Self-seeding: Automatically seed the default database structure if not found
+        console.log("Firestore public_data bundle not found. Auto-seeding default database structure...");
+        const defaultBundle = getDefaultSeedBundle();
+        await setDoc(docRef, defaultBundle);
+        cachedPublicData = defaultBundle;
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify(cachedPublicData));
+          localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+        } catch (e) {
+          console.warn("Error writing to localStorage cache:", e);
+        }
+        return cachedPublicData;
+      }
+    } finally {
+      pendingFetchPromise = null;
+    }
+  })();
+
+  return pendingFetchPromise;
 }
 
 // Helper to save public bundle and sync local cache
@@ -451,6 +458,12 @@ async function savePublicDataBundle(data) {
   const docRef = doc(firestoreDb, "settings", "public_data");
   await setDoc(docRef, data);
   cachedPublicData = data;
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+  } catch (e) {
+    console.warn("Error updating localStorage cache:", e);
+  }
 }
 
 // 1. GET SINGLE DOCUMENT
@@ -637,6 +650,13 @@ export function listenCollection(colName, callback) {
       unsubscribe = onSnapshot(docRef, (snap) => {
         if (snap.exists()) {
           const data = snap.data();
+          cachedPublicData = data;
+          try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+            localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+          } catch (e) {
+            console.warn("Error updating localStorage cache from listener:", e);
+          }
           const items = data[colName] || [];
           const sorted = [...items].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
           callback(sorted);
@@ -774,246 +794,229 @@ export async function uploadMedia(file) {
   }
 }
 
-// 12. AUTO-SEED DATABASE IF FRESH/EMPTY
-async function checkAndSeedFirestore() {
-  try {
-    const { doc, getDoc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js");
-    const bundleRef = doc(firestoreDb, "settings", "public_data");
-    const docSnap = await getDoc(bundleRef);
-
-    if (!docSnap.exists()) {
-      console.log("Firestore public_data bundle not found. Auto-seeding default database structure...");
-
-      const defaultBundle = {
-        settings: {
-          instituteName: "MathScienceYJR",
-          logoUrl: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?auto=format&fit=crop&q=80&w=200",
-          contactNumber: "+91 98765 43210",
-          whatsAppNumber: "919876543210",
-          email: "admissions@mathscienceyjr.com",
-          address: "YJR Towers, 4th Floor, Sector 62, Noida, UP, India",
-          socialMedia: {
-            facebook: "https://facebook.com",
-            instagram: "https://instagram.com",
-            youtube: "https://youtube.com"
-          },
-          googleMapLink: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3502.562013898167!2d77.37687831508249!3d28.612911982425514!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390ce5a5ece55555%3A0xe543e33c6af4c37f!2sMathScienceYJR!5e0!3m2!1sen!2sin!4v1622718228392!5m2!1sen!2sin"
-        },
-        homepage: {
-          hero: {
-            title: "Unlock Conceptual Excellence in STEM",
-            description: "MathScienceYJR is India's leading academy for elite math, physics, and chemistry coaching. Master advanced boards, Olympiads, JEE, and NEET with our expert pedagogy.",
-            imageUrl: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=1200",
-            ctaText: "Apply Online Now",
-            ctaLink: "/pages/admission.html"
-          },
-          sections: [
-            { id: "statistics", enabled: true, order: 1 },
-            { id: "whyChooseUs", enabled: true, order: 2 },
-            { id: "courses", enabled: true, order: 3 },
-            { id: "results", enabled: true, order: 4 },
-            { id: "testimonials", enabled: true, order: 5 },
-            { id: "gallery", enabled: true, order: 6 },
-            { id: "announcements", enabled: true, order: 7 }
-          ]
-        },
-        forms: {
-          inquiry: {
-            formTitle: "Quick General Inquiry",
-            enabled: true,
-            fields: [
-              { id: "fullName", type: "text", label: "Full Name", required: true, order: 1 },
-              { id: "emailAddress", type: "email", label: "Email Address", required: true, order: 2 },
-              { id: "phoneNumber", type: "tel", label: "Contact Phone", required: true, order: 3 },
-              { id: "queryDescription", type: "textarea", label: "Message / Query", required: false, order: 4 }
-            ]
-          },
-          admission: {
-            formTitle: "Dynamic Online Admission Form",
-            enabled: true,
-            fields: [
-              { id: "fullName", type: "text", label: "Student Full Name", required: true, order: 1 },
-              { id: "parentName", type: "text", label: "Parent / Guardian Name", required: true, order: 2 },
-              { id: "parentContact", type: "tel", label: "Parent Mobile Number", required: true, order: 3 },
-              { id: "courseChoice", type: "select", label: "Select Course Path", options: ["Olympiad Foundation & Advanced Math", "JEE & NEET Intensive Physics", "Olympiad Chemistry Elite"], required: true, order: 4 },
-              { id: "dateOfBirth", type: "date", label: "Date of Birth", required: true, order: 5 },
-              { id: "previousScore", type: "text", label: "Previous Class / Exam Score (%)", required: false, order: 6 }
-            ]
-          }
-        },
-        courses: [
-          {
-            id: "course_1",
-            title: "Olympiad Foundation & Advanced Math",
-            category: "Mathematics",
-            duration: "1 Year",
-            fees: "₹45,000",
-            description: "Comprehensive training for RMO, INMO, and JEE Advanced mathematics. Covers complex number systems, advanced algebra, calculus, and discrete theory.",
-            imageUrl: "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=600",
-            syllabus: ["Advanced Calculus", "Olympiad Combinatorics", "Analytical Geometry"],
-            visible: true,
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: "course_2",
-            title: "JEE & NEET Intensive Physics",
-            category: "Physics",
-            duration: "1 Year",
-            fees: "₹50,000",
-            description: "Rigorous concept building in Mechanics, Electromagnetism, and Modern Physics. Highly analytical problem sets aligned with national exam profiles.",
-            imageUrl: "https://images.unsplash.com/photo-1607988795691-3d0147b43231?auto=format&fit=crop&q=80&w=600",
-            syllabus: ["Rotational Dynamics", "Electromagnetism", "Quantum Foundations"],
-            visible: true,
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: "course_3",
-            title: "Olympiad Chemistry Elite",
-            category: "Chemistry",
-            duration: "6 Months",
-            fees: "₹28,000",
-            description: "Advanced Physical Chemistry, Organic reaction mechanisms, and Inorganic Coordination chemistry for National level examinations.",
-            imageUrl: "https://images.unsplash.com/photo-1532187643603-ba119ca4109e?auto=format&fit=crop&q=80&w=600",
-            syllabus: ["Organic Synthesis", "Chemical Kinetics", "Thermodynamics"],
-            visible: true,
-            createdAt: new Date().toISOString()
-          }
-        ],
-        results: [
-          {
-            id: "res_1",
-            studentName: "Aditya Verma",
-            examName: "JEE Advanced 2025",
-            marks: "336/360",
-            rank: "AIR 12",
-            photoUrl: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=300",
-            achievementType: "Gold Medalist",
-            featured: true,
-            visible: true,
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: "res_2",
-            studentName: "Sneha Nair",
-            examName: "NEET UG 2025",
-            marks: "715/720",
-            rank: "AIR 28",
-            photoUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=300",
-            achievementType: "AIIMS New Delhi Merit",
-            featured: true,
-            visible: true,
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: "res_3",
-            studentName: "Rohan Gupta",
-            examName: "Math Olympiad (INMO)",
-            marks: "92/100",
-            rank: "National Rank 3",
-            photoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300",
-            achievementType: "IMOTC Qualified",
-            featured: true,
-            visible: true,
-            createdAt: new Date().toISOString()
-          }
-        ],
-        testimonials: [
-          {
-            id: "test_1",
-            authorName: "Dr. Sandeep Verma",
-            role: "Parent of Aditya Verma (AIR 12)",
-            review: "MathScienceYJR completely changed my son's outlook on learning. Rather than rote memorization, they built rigorous analytical fundamentals.",
-            photoUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150",
-            videoUrl: "",
-            featured: true,
-            visible: true,
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: "test_2",
-            authorName: "Sneha Nair",
-            role: "NEET Topper 2025",
-            review: "The weekly test feedback and absolute clarity of physics classes helped me conquer the hardest MCQ formats effortlessly.",
-            photoUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150",
-            videoUrl: "",
-            featured: true,
-            visible: true,
-            createdAt: new Date().toISOString()
-          }
-        ],
-        announcements: [
-          {
-            id: "ann_1",
-            title: "YJR Scholarship Test (YST) 2026",
-            content: "The registration is open for YST 2026. Qualify to earn up to 100% fee waiver for advanced Olympiad batches.",
-            pinned: true,
-            visible: true,
-            scheduledDate: new Date().toISOString().split('T')[0],
-            expiryDate: "2026-08-30",
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: "ann_2",
-            title: "Olympiad Classes Batch Commences",
-            content: "Advanced batches for High School Math & Physics Olympiads commence on June 15th. Reserve your desk now.",
-            pinned: false,
-            visible: true,
-            scheduledDate: new Date().toISOString().split('T')[0],
-            expiryDate: "2026-06-20",
-            createdAt: new Date().toISOString()
-          }
-        ],
-        media: [
-          {
-            id: "med_1",
-            name: "classroom.jpg",
-            url: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&q=80&w=600",
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: "med_2",
-            name: "awards.jpg",
-            url: "https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?auto=format&fit=crop&q=80&w=600",
-            createdAt: new Date().toISOString()
-          }
-        ],
-        gallery: [
-          {
-            id: "gal_1",
-            imageUrl: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&q=80&w=600",
-            caption: "Interactive Physics Lab Session",
-            album: "Infrastructure",
-            order: 1,
-            visible: true,
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: "gal_2",
-            imageUrl: "https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?auto=format&fit=crop&q=80&w=600",
-            caption: "Annual Science Exhibition & Olympiad Awards",
-            album: "Events",
-            order: 2,
-            visible: true,
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: "gal_3",
-            imageUrl: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=600",
-            caption: "Toppers Panel Group Discussion",
-            album: "Seminars",
-            order: 3,
-            visible: true,
-            createdAt: new Date().toISOString()
-          }
+// 12. GET DEFAULT SEED DATA STRUCTURE
+function getDefaultSeedBundle() {
+  return {
+    settings: {
+      instituteName: "MathScienceYJR",
+      logoUrl: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?auto=format&fit=crop&q=80&w=200",
+      contactNumber: "+91 98765 43210",
+      whatsAppNumber: "919876543210",
+      email: "admissions@mathscienceyjr.com",
+      address: "YJR Towers, 4th Floor, Sector 62, Noida, UP, India",
+      socialMedia: {
+        facebook: "https://facebook.com",
+        instagram: "https://instagram.com",
+        youtube: "https://youtube.com"
+      },
+      googleMapLink: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3502.562013898167!2d77.37687831508249!3d28.612911982425514!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390ce5a5ece55555%3A0xe543e33c6af4c37f!2sMathScienceYJR!5e0!3m2!1sen!2sin!4v1622718228392!5m2!1sen!2sin"
+    },
+    homepage: {
+      hero: {
+        title: "Unlock Conceptual Excellence in STEM",
+        description: "MathScienceYJR is India's leading academy for elite math, physics, and chemistry coaching. Master advanced boards, Olympiads, JEE, and NEET with our expert pedagogy.",
+        imageUrl: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=1200",
+        ctaText: "Apply Online Now",
+        ctaLink: "/pages/admission.html"
+      },
+      sections: [
+        { id: "statistics", enabled: true, order: 1 },
+        { id: "whyChooseUs", enabled: true, order: 2 },
+        { id: "courses", enabled: true, order: 3 },
+        { id: "results", enabled: true, order: 4 },
+        { id: "testimonials", enabled: true, order: 5 },
+        { id: "gallery", enabled: true, order: 6 },
+        { id: "announcements", enabled: true, order: 7 }
+      ]
+    },
+    forms: {
+      inquiry: {
+        formTitle: "Quick General Inquiry",
+        enabled: true,
+        fields: [
+          { id: "fullName", type: "text", label: "Full Name", required: true, order: 1 },
+          { id: "emailAddress", type: "email", label: "Email Address", required: true, order: 2 },
+          { id: "phoneNumber", type: "tel", label: "Contact Phone", required: true, order: 3 },
+          { id: "queryDescription", type: "textarea", label: "Message / Query", required: false, order: 4 }
         ]
-      };
-
-      await setDoc(bundleRef, defaultBundle);
-      console.log("Firestore successfully seeded with bundled public data!");
-    } else {
-      console.log("Firestore bundled data exists. Skipping database seeding.");
-    }
-  } catch (err) {
-    console.error("Failed checking or seeding Firestore: ", err);
-  }
+      },
+      admission: {
+        formTitle: "Dynamic Online Admission Form",
+        enabled: true,
+        fields: [
+          { id: "fullName", type: "text", label: "Student Full Name", required: true, order: 1 },
+          { id: "parentName", type: "text", label: "Parent / Guardian Name", required: true, order: 2 },
+          { id: "parentContact", type: "tel", label: "Parent Mobile Number", required: true, order: 3 },
+          { id: "courseChoice", type: "select", label: "Select Course Path", options: ["Olympiad Foundation & Advanced Math", "JEE & NEET Intensive Physics", "Olympiad Chemistry Elite"], required: true, order: 4 },
+          { id: "dateOfBirth", type: "date", label: "Date of Birth", required: true, order: 5 },
+          { id: "previousScore", type: "text", label: "Previous Class / Exam Score (%)", required: false, order: 6 }
+        ]
+      }
+    },
+    courses: [
+      {
+        id: "course_1",
+        title: "Olympiad Foundation & Advanced Math",
+        category: "Mathematics",
+        duration: "1 Year",
+        fees: "₹45,000",
+        description: "Comprehensive training for RMO, INMO, and JEE Advanced mathematics. Covers complex number systems, advanced algebra, calculus, and discrete theory.",
+        imageUrl: "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=600",
+        syllabus: ["Advanced Calculus", "Olympiad Combinatorics", "Analytical Geometry"],
+        visible: true,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: "course_2",
+        title: "JEE & NEET Intensive Physics",
+        category: "Physics",
+        duration: "1 Year",
+        fees: "₹50,000",
+        description: "Rigorous concept building in Mechanics, Electromagnetism, and Modern Physics. Highly analytical problem sets aligned with national exam profiles.",
+        imageUrl: "https://images.unsplash.com/photo-1607988795691-3d0147b43231?auto=format&fit=crop&q=80&w=600",
+        syllabus: ["Rotational Dynamics", "Electromagnetism", "Quantum Foundations"],
+        visible: true,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: "course_3",
+        title: "Olympiad Chemistry Elite",
+        category: "Chemistry",
+        duration: "6 Months",
+        fees: "₹28,000",
+        description: "Advanced Physical Chemistry, Organic reaction mechanisms, and Inorganic Coordination chemistry for National level examinations.",
+        imageUrl: "https://images.unsplash.com/photo-1532187643603-ba119ca4109e?auto=format&fit=crop&q=80&w=600",
+        syllabus: ["Organic Synthesis", "Chemical Kinetics", "Thermodynamics"],
+        visible: true,
+        createdAt: new Date().toISOString()
+      }
+    ],
+    results: [
+      {
+        id: "res_1",
+        studentName: "Aditya Verma",
+        examName: "JEE Advanced 2025",
+        marks: "336/360",
+        rank: "AIR 12",
+        photoUrl: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=300",
+        achievementType: "Gold Medalist",
+        featured: true,
+        visible: true,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: "res_2",
+        studentName: "Sneha Nair",
+        examName: "NEET UG 2025",
+        marks: "715/720",
+        rank: "AIR 28",
+        photoUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=300",
+        achievementType: "AIIMS New Delhi Merit",
+        featured: true,
+        visible: true,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: "res_3",
+        studentName: "Rohan Gupta",
+        examName: "Math Olympiad (INMO)",
+        marks: "92/100",
+        rank: "National Rank 3",
+        photoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300",
+        achievementType: "IMOTC Qualified",
+        featured: true,
+        visible: true,
+        createdAt: new Date().toISOString()
+      }
+    ],
+    testimonials: [
+      {
+        id: "test_1",
+        authorName: "Dr. Sandeep Verma",
+        role: "Parent of Aditya Verma (AIR 12)",
+        review: "MathScienceYJR completely changed my son's outlook on learning. Rather than rote memorization, they built rigorous analytical fundamentals.",
+        photoUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150",
+        videoUrl: "",
+        featured: true,
+        visible: true,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: "test_2",
+        authorName: "Sneha Nair",
+        role: "NEET Topper 2025",
+        review: "The weekly test feedback and absolute clarity of physics classes helped me conquer the hardest MCQ formats effortlessly.",
+        photoUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150",
+        videoUrl: "",
+        featured: true,
+        visible: true,
+        createdAt: new Date().toISOString()
+      }
+    ],
+    announcements: [
+      {
+        id: "ann_1",
+        title: "YJR Scholarship Test (YST) 2026",
+        content: "The registration is open for YST 2026. Qualify to earn up to 100% fee waiver for advanced Olympiad batches.",
+        pinned: true,
+        visible: true,
+        scheduledDate: new Date().toISOString().split('T')[0],
+        expiryDate: "2026-08-30",
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: "ann_2",
+        title: "Olympiad Classes Batch Commences",
+        content: "Advanced batches for High School Math & Physics Olympiads commence on June 15th. Reserve your desk now.",
+        pinned: false,
+        visible: true,
+        scheduledDate: new Date().toISOString().split('T')[0],
+        expiryDate: "2026-06-20",
+        createdAt: new Date().toISOString()
+      }
+    ],
+    media: [
+      {
+        id: "med_1",
+        name: "classroom.jpg",
+        url: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&q=80&w=600",
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: "med_2",
+        name: "awards.jpg",
+        url: "https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?auto=format&fit=crop&q=80&w=600",
+        createdAt: new Date().toISOString()
+      }
+    ],
+    gallery: [
+      {
+        id: "gal_1",
+        imageUrl: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&q=80&w=600",
+        caption: "Interactive Physics Lab Session",
+        album: "Infrastructure",
+        order: 1,
+        visible: true,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: "gal_2",
+        imageUrl: "https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?auto=format&fit=crop&q=80&w=600",
+        caption: "Annual Science Exhibition & Olympiad Awards",
+        album: "Events",
+        order: 2,
+        visible: true,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: "gal_3",
+        imageUrl: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=600",
+        caption: "Toppers Panel Group Discussion",
+        album: "Seminars",
+        order: 3,
+        visible: true,
+        createdAt: new Date().toISOString()
+      }
+    ]
+  };
 }
