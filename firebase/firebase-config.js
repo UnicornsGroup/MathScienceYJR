@@ -12,10 +12,9 @@ const firebaseConfig = {
 };
 
 // Check if credentials are placeholders
-const isMockMode = !firebaseConfig.apiKey || 
-                   firebaseConfig.apiKey.trim() === "" || 
-                   firebaseConfig.apiKey.includes("YOUR_API_KEY") || 
-                   firebaseConfig.apiKey === "AIzaSyBOt4BNvjvdF9lxow6KyhzUKymPz6A1GgA";
+let isMockMode = !firebaseConfig.apiKey || 
+                 firebaseConfig.apiKey.trim() === "" || 
+                 firebaseConfig.apiKey.includes("YOUR_API_KEY");
 
 // MOCK SYSTEM INITIALIZATION
 const initMockDB = () => {
@@ -351,6 +350,8 @@ if (!isMockMode) {
     firebaseAuth = getAuth(firebaseApp);
     console.log("Firebase initialized successfully in online mode.");
   } catch (err) {
+    isMockMode = true;
+    initMockDB();
     console.warn("Failed to load Firebase modules online, switching to Local DB mock mode.", err);
   }
 }
